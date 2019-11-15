@@ -24,6 +24,10 @@ method_get <- function(d_config, m_config) {
     } else {
       method$w_year <- F
     }
+  } else if (class(method) == "rld") {
+    # pass
+  } else if (class(method) == "dwt") {
+    # pass
   } else if (class(method) == "tsfresh") {
     method$ti <- util_read(d_config, "timestamps")
   } else {

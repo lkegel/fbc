@@ -31,6 +31,12 @@ d <- config_read_csv("d", a_parse)
 
 m <- config_read_csv("fbg", a_parse)
 m <- c(m, config_read_csv("tsfresh", a_parse))
+m <- c(m, config_read_csv("dwt", a_parse))
+m <- c(m, config_read_csv("rld", a_parse))
+
+s <- config_read_csv("s", a_parse)
+
+f <- config_read_csv("f", a_parse)
 
 # rt <- config_read_csv("rt", a_parse)
 # 
