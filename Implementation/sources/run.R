@@ -9,7 +9,7 @@ run_method <- function(d_configs, m_configs, force = T) {
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       if (force || 
-          !intermediate_exists(dataset_config, method_config, "method")) {
+          !intermediate_exists(d_config, m_config, "method")) {
         run_info("method", d_config, m_config)
         method <- method_get(d_config, m_config)
         intermediate_save(d_config, method, "method", m_config)
@@ -20,7 +20,7 @@ run_method <- function(d_configs, m_configs, force = T) {
 
 run_represent <- function(d_configs, m_configs, force = T, parallel = F) {
   fn <- function(name, I) {
-    dataset <- util_read_dataset(d_config, "dataset", I)
+    dataset <- util_read_dataset(d_config, name, I)
     repr <- represent(dataset, method, parallel)
     intermediate_save(d_config, repr, paste0("represent-", name), m_config)
   }
@@ -28,7 +28,7 @@ run_represent <- function(d_configs, m_configs, force = T, parallel = F) {
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       if (force || 
-          !intermediate_exists(dataset_config, method_config, "method")) {
+          !intermediate_exists(d_config, "represent-dataset", m_config)) {
         method <- intermediate_read(d_config, "method", m_config)
         run_info("represent-data", d_config, m_config)
         fn("dataset", d_config$I - d_config$Q)
@@ -42,8 +42,8 @@ run_scale <- function(d_configs, m_configs, s_configs, force = T) {
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       for (s_config in s_configs) {
-        if (force ||  !intermediate_exists(dataset_config, method_config,
-                                           "scale", s_config)) {
+        if (force ||  !intermediate_exists(d_config, "scale", m_config,
+                                           s_config)) {
           repr_data <- intermediate_read(d_config, paste0("represent-dataset"),
                                          m_config)
           repr_query <- intermediate_read(d_config,
@@ -63,7 +63,8 @@ run_scale <- function(d_configs, m_configs, s_configs, force = T) {
   }
 }
 
-run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs, force = T) {
+run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs,
+                                  force = T, parallel = F) {
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       for (s_config in s_configs) {
@@ -74,20 +75,75 @@ run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs, fo
                                              s_config,
                                              f_config)) {
             run_info("feature_selection", d_config, m_config, s_config, f_config)
-            if (s_config$name == "scaleno") {
-              dataset <- intermediate_read(d_config, paste0("represent-dataset"),
-                                              m_config)  
-            } else {
-              dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
-                                              m_config, s_config)
+            dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
+                                         m_config, s_config)
+            fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+            y <- read.table(fp, header = T, sep = ";")[, "Code"]
+            
+            # Hack to avoid issues with not frequent Payment classes
+            if (d_config$name == "Payment" && f_config$name == "fbr") {
+              idx<- which(y %in% c(3, 4))
+              dataset <- dataset[-idx, ]
+              y <- y[-idx]
             }
             
-            fp <- util_get_filepath(d_config, "dataset", ext = "csv")
-            meta <- read.table(fp, header = T, sep = ";")
-            selected_features <- select_features(f_config, dataset, meta)
+            if (f_config$name == "no") {
+              method <- NA
+            } else {
+              method <- intermediate_read(d_config, "method",
+                                          list(mid = f_config$mid))  
+            }
             
+            selected_features <- select_features(m_config, f_config, method,
+                                                 dataset, y, parallel)
             intermediate_save(d_config, selected_features, "feature-selection",
                               m_config, s_config, f_config)
+          }
+        }
+      }
+    }
+  }
+}
+
+run_classify <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
+                                  force = T, parallel = F) {
+  for (d_config in d_configs) {
+    for (m_config in m_configs) {
+      for (s_config in s_configs) {
+        for (f_config in f_configs) {
+          for (c_config in c_configs) {
+            if (force ||  !intermediate_exists(d_config,
+                                               "classify",
+                                               m_config,
+                                               s_config,
+                                               f_config,
+                                               c_config)) {
+              run_info("classify", d_config, m_config, s_config, f_config,
+                       c_config)
+              method <- intermediate_read(d_config, "method", m_config)
+              dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
+                                           m_config, s_config)
+              queryset <- intermediate_read(d_config, paste0("scaled-queryset"),
+                                           m_config, s_config)
+            
+              fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+              y <- read.table(fp, header = T, sep = ";")[, "Code"]
+              selected_features <- intermediate_read(d_config,
+                                                     "feature-selection",
+                                                     m_config, s_config,
+                                                     f_config)
+              # Hack for rld
+              selected_features_query <- intersect(selected_features,
+                                                   colnames(queryset))
+              pred <- classify_run(d_config, c_config, method,
+                                   dataset[, selected_features],
+                                   y, queryset[, selected_features_query],
+                                   parallel)
+              
+              intermediate_save(d_config, pred, "classify", m_config, s_config,
+                                f_config, c_config)
+              
+            }
           }
         }
       }
