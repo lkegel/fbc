@@ -20,7 +20,7 @@ classify_estimate <- function(d_config, c_config, dataset, y, parallel, validate
     if (c_config$name == "dt") {
       fit <- rpart(form, data = data, method = "class", control = rpart.control())  
     } else if (c_config$name == "svm") {
-      fit <- svm(formula = form, data = data, type = 'C-classification',
+      fit <- svm(formula = form, data = data, type = 'C-classification', scale = F,
                  kernel = c_config$kernel, cross = 10)
     } else stop("NA")
   } else if (c_config$name == "gbm") {

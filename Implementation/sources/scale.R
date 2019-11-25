@@ -18,7 +18,7 @@ scale_run <- function(repr_data, repr_query, s_config) {
     result_query <- impute_query <- as.matrix(impute_query)
     
     if (s_config$name != "No Scaling") {
-      scaler_map <- c(`01 Scaling` = "Norm01", `01 Scaling with Outlier` = "Norm01_Outlier")
+      scaler_map <- c(`01 Scaling` = "Norm01", `01 Scaling with Outlier` = "Norm01_Outlier", `Z Scaling` = "ZNorm")
       scaler <- new(scaler_map[s_config$name])
       scale_data <- as.data.frame(lapply(as.data.frame(impute_data), function(col) {
         return(scaler$scale(col))
