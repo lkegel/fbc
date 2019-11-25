@@ -12,7 +12,7 @@ classify_run <- function(d_config, c_config, method, dataset, y, queryset,
   return(as.factor(labels[sapply(pred, function(pivot) {which(pivot == y_map)})]))
 }
 
-classify_estimate <- function(d_config, c_config, dataset, y, parallel) {
+classify_estimate <- function(d_config, c_config, dataset, y, parallel, validate = F) {
   if (c_config$name %in% c("dt", "svm")) {
     data <- as.data.frame(dataset)
     data$y <- as.factor(y)
@@ -21,7 +21,7 @@ classify_estimate <- function(d_config, c_config, dataset, y, parallel) {
       fit <- rpart(form, data = data, method = "class", control = rpart.control())  
     } else if (c_config$name == "svm") {
       fit <- svm(formula = form, data = data, type = 'C-classification',
-                 kernel = c_config$kernel)
+                 kernel = c_config$kernel, cross = 10)
     } else stop("NA")
   } else if (c_config$name == "gbm") {
     params <- list(eta = c_config$eta, # [0, 1, default 0.3]
@@ -40,8 +40,11 @@ classify_estimate <- function(d_config, c_config, dataset, y, parallel) {
                  nfold = c_config$nfold, verbose = T,
                  early_stopping_rounds = c_config$early_stopping_rounds)
     
-    fit <- xgb.train(params = params, data = data, nrounds = cv$best_iteration)
-    
+    if (validate) {
+      fit <- cv
+    } else {
+      fit <- xgb.train(params = params, data = data, nrounds = cv$best_iteration)  
+    }
   }
   # else if (c_config$name == "gbm_grid") {
   #   xgb_meta <- expand.grid(
