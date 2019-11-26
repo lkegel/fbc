@@ -67,6 +67,10 @@ run_scale <- function(d_configs, m_configs, s_configs, force = T) {
 
 run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs,
                                   force = T, parallel = F) {
+
+  all_configs <- list()
+  idx <- 1
+  
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       for (s_config in s_configs) {
@@ -76,34 +80,63 @@ run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs,
                                              m_config,
                                              s_config,
                                              f_config)) {
-            run_info("feature_selection", d_config, m_config, s_config, f_config)
-            dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
-                                         m_config, s_config)
-            fp <- util_get_filepath(d_config, "dataset", ext = "csv")
-            y <- read.table(fp, header = T, sep = ";")[, "Code"]
-            
-            # Hack to avoid issues with not frequent Payment classes
-            if (d_config$name == "Payment" && f_config$name == "fbr") {
-              idx<- which(y %in% c(3, 4))
-              dataset <- dataset[-idx, ]
-              y <- y[-idx]
-            }
-            
-            if (f_config$name == "no") {
-              method <- NA
-            } else {
-              method <- intermediate_read(d_config, "method",
-                                          list(mid = f_config$mid))  
-            }
-            
-            selected_features <- select_features(m_config, f_config, method,
-                                                 dataset, y, parallel)
-            intermediate_save(d_config, selected_features, "feature-selection",
-                              m_config, s_config, f_config)
+            all_configs[[idx]] <- list(D = d_config,
+                                       M = m_config,
+                                       S = s_config,
+                                       F = f_config)
+            idx <- idx + 1
           }
         }
       }
     }
+  }
+  
+  run_fn <- function(all_config) {
+    d_config <- all_config$D
+    m_config <- all_config$M
+    s_config <- all_config$S
+    f_config <- all_config$F
+    
+    run_info("feature_selection", d_config, m_config, s_config, f_config)
+    dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
+                                 m_config, s_config)
+    fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+    y <- read.table(fp, header = T, sep = ";")[, "Code"]
+    
+    # Hack to avoid issues with not frequent Payment classes
+    if (d_config$name == "Payment" && f_config$name == "fbr") {
+      idx<- which(y %in% c(3, 4))
+      dataset <- dataset[-idx, ]
+      y <- y[-idx]
+    }
+    
+    if (f_config$name == "no") {
+      method <- NA
+    } else {
+      method <- intermediate_read(d_config, "method",
+                                  list(mid = f_config$mid))
+    }
+    
+    selected_features <- select_features(m_config, f_config, method,
+                                         dataset, y, F)
+    intermediate_save(d_config, selected_features, "feature-selection",
+                      m_config, s_config, f_config)
+    return(0)
+  }
+  
+  if (parallel) {
+    tf <- tmpfile()
+    print(paste("Feature Selection Tempfile:", tf))
+    num_cores <- parallel::detectCores() - 1
+    cl <- parallel::makeCluster(num_cores, outfile = tf)
+    parallel::clusterEvalQ(cl, setwd(file.path(Sys.getenv("FBC"))))
+    parallel::clusterEvalQ(cl, source("Implementation/init.R"))
+    
+    parallel::parLapplyLB(cl, all_configs, run_fn)
+    
+    parallel::stopCluster(cl)
+  } else {
+    lapply(all_configs, run_fn)
   }
 }
 
@@ -132,9 +165,7 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                                      "feature-selection",
                                                      m_config, s_config,
                                                      f_config)
-              # Hack for rld
-              selected_features_query <- intersect(selected_features,
-                                                   colnames(queryset))
+
               pred <- validate_run(d_config, c_config, method,
                                    dataset[, selected_features],
                                    y, parallel)
@@ -147,6 +178,44 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
         }
       }
     }
+  }
+}
+
+run_best <- function(d_configs, m_configs, c_configs, s_configs, f_configs,
+                     force = T, parallel = F) {
+  for (d_config in d_configs) {
+    mname <- list(mname = m_configs[[1]]$name)
+    cname <- list(cname = c_configs[[1]]$name)
+    dt <- NA
+    
+    fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+    y <- factor(read.table(fp, header = T, sep = ";")[, "Code"])
+    
+    for (m_config in m_configs) {
+      for (c_config in c_configs) {
+        for (s_config in s_configs) {
+          for (f_config in f_configs) {
+            pred <- intermediate_read(d_config, "validate", m_config, s_config,
+                                      f_config, c_config)
+            
+            if (is.data.table(dt)) {
+              dt <- rbindlist(list(dt, list(m_config[[1]], c_config[[1]],
+                                            s_config[[1]], f_config[[1]],
+                                            acc(y, pred))))
+            } else {
+              dt <- data.table(mid = m_config[[1]], cid = c_config[[1]],
+                               sid = s_config[[1]], fid = f_config[[1]],
+                               acc = acc(y, pred))
+            }
+          }
+        }
+      }
+    }
+    
+    dt <- dt[order(acc, decreasing = T)]
+    print(dt)
+    
+    intermediate_save(d_config, dt, "best", mname, cname)
   }
 }
 

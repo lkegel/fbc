@@ -1,34 +1,9 @@
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Library ----------------------------------------------------------------------
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# .libPaths("C:/Users/Lars/Documents/R/win-library/3.4")
-# .libPaths()
-suppressPackageStartupMessages(library(stringr))
-suppressPackageStartupMessages(library(data.table))
-suppressPackageStartupMessages(library(classrepr))
-suppressPackageStartupMessages(library(idxrepr))
-suppressPackageStartupMessages(library(R.utils))
-suppressPackageStartupMessages(library(TST))
-suppressPackageStartupMessages(library(caret))
-suppressPackageStartupMessages(library(rpart))
-suppressPackageStartupMessages(library(e1071))
-suppressPackageStartupMessages(library(xgboost))
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Directory --------------------------------------------------------------------
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 root <- file.path(Sys.getenv("FBC"))
 setwd(root)
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Sources ----------------------------------------------------------------------
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-sourceDirectory(file.path("Implementation", "sources"), modifiedOnly = F)
-
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Configurations ---------------------------------------------------------------
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-sourceDirectory(file.path("Implementation", "configs"), modifiedOnly = F)
+source("Implementation/init.R")
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # +++++++++++ ------------------------------------------------------------------
@@ -38,13 +13,44 @@ run_method(d, m)
 # 80 - is done separately
 run_represent(d, m[c("10", "11", "12", "20", "30")], force = F)
 # rld and dwt are not scaled or imputed
-run_scale(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3")])
+run_scale(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")], force = F)
 run_scale(d, m[c("20", "30")], s["4"])
 
-run_feature_selection(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3")],
-                      f[c("1", "1010", "1020", "1030", "1037", "1040", "1050", "1060", "1070", "1073", "1080", "1090", "8000")])
+run_feature_selection(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")],
+                      f[c("1", "1010", "1020", "1030", "1037", "1040", "1050", "1060", "1070", "1073", "1080", "1090", "8000")], force = F)
 run_feature_selection(d, m["20"], s["4"], f["1"])
 run_feature_selection(d, m["30"], s["4"], f[c("3005", "3010", "3020", "3030", "3037", "3073")])
+
+eval_feature_selection(d["1"], m["11"], s[c("2", "3", "5")],
+                       f["1010"])
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# +++++++++++ ------------------------------------------------------------------
+# Calibration Subset -----------------------------------------------------------
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+run_method(d, m)
+# 80 - is done separately
+run_represent(d, m[c("10", "11", "12", "20", "30")], force = F)
+# rld and dwt are not scaled or imputed
+run_scale(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")], force = F)
+run_scale(d, m[c("20", "30")], s["4"])
+
+run_feature_selection(d, m["11"], s["1"], f["1"], force = F)
+run_feature_selection(d, m[c("12", "80")], s[c("1", "2")], f[c("1", "1010", "8000")], force = F)
+run_feature_selection(d, m["20"], s["4"], f["1"])
+run_feature_selection(d, m["30"], s["4"], f["3010"])
+
+run_feature_selection(d["2"], m["10"], s[c("2", "3")],
+                      f[c("1010", "1020")], force = F, parallel = T)
+
+run_validate(d["3"], m[c("11", "12")], s["1"], f["1"], c["10"], force = F)
+run_validate(d["3"], m["12"], s["1"], f["1"], c["20"])
+run_validate(d["3"], m["12"], s["1"], f["1"], c["30"])
+
+run_best(d["3"], m[c("11", "12")], c["10"], s["1"], f["1"])
+
+eval_validate(d["3"], m["12"], s["1"], f["1"], c["10"])
 
 
 

@@ -14,8 +14,28 @@ eval_feature_selection <- function(d_configs, m_configs, s_configs, f_configs) {
                    f_config)
           features <- intermediate_read(d_config, "feature-selection", m_config,
                                     s_config, f_config)
-          print(head(features))
+          print(head(features, 20))
           print(paste("Length:", length(features)))
+        }
+      }
+    }
+  }
+}
+
+eval_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs) {
+  for (d_config in d_configs) {
+    for (m_config in m_configs) {
+      for (s_config in s_configs) {
+        for (f_config in f_configs) {
+          for (c_config in c_configs) {
+            run_info("eval_validate", d_config, m_config, s_config, f_config,
+                     c_config)
+            fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+            y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
+            pred <- intermediate_read(d_config, "validate", m_config, s_config,
+                                      f_config, c_config)
+            return(acc(y, pred))
+          }
         }
       }
     }
@@ -42,7 +62,7 @@ acc <- function(y, pred) {
   cm <- NA
   suppressWarnings(cm <- confusionMatrix(pred, y))
   
-  return(cm$overall["Accuracy"])
+  return(unname(cm$overall["Accuracy"]))
 }
 
 accuracy <- function(d_config, m_config, s_config, f_config, c_config) {
