@@ -37,7 +37,7 @@ classify_estimate <- function(d_config, c_config, dataset, y, parallel, validate
 
     data <- xgboost::xgb.DMatrix(dataset, label = y)
     cv <- xgb.cv(params = params, data = data, nrounds = c_config$nrounds,
-                 nfold = c_config$nfold, verbose = T,
+                 nfold = c_config$nfold, verbose = T, prediction = validate,
                  early_stopping_rounds = c_config$early_stopping_rounds)
     
     if (validate) {
