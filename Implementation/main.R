@@ -11,18 +11,23 @@ source("Implementation/init.R")
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 run_method(d, m)
 # 80 - is done separately
-run_represent(d, m[c("10", "11", "12", "20", "30")], force = F)
+run_represent(d, m[c("10", "11", "12", "13", "14", "15", "20", "30")], force = F)
 # rld and dwt are not scaled or imputed
-run_scale(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")], force = F)
+run_scale(d, m[c("10", "11", "12", "13", "14", "15", "80")], s[c("1", "2", "3", "5")], force = F)
 run_scale(d, m[c("20", "30")], s["4"])
 
-run_feature_selection(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")],
-                      f[c("1", "1010", "1020", "1030", "1037", "1040", "1050", "1060", "1070", "1073", "1080", "1090", "8000")], force = F)
-run_feature_selection(d, m["20"], s["4"], f["1"])
-run_feature_selection(d, m["30"], s["4"], f[c("3005", "3010", "3020", "3030", "3037", "3073")])
+# run_feature_selection(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")],
+#                       f[c("1", "1010", "1020", "1030", "1037", "1040", "1050", "1060", "1070", "1073", "1080", "1090", "8000")], force = F, parallel = T)
+run_feature_selection(d, m[c("13", "14", "15", "80")], s[c("1", "2", "3", "5")],
+                      f[c("1", "1399", "8000")], force = F, parallel = F)
+run_feature_selection(d, m["20"], s["4"], f["1"], force = F, parallel = T)
+run_feature_selection(d, m["30"], s["4"], f[c("3005", "3010", "3020", "3030", "3037", "3073")], force = F, parallel = T)
 
 eval_feature_selection(d["1"], m["11"], s[c("2", "3", "5")],
                        f["1010"])
+
+run_validate(d["3"], m[c("13")], s["1"], f["1"], c[c("10", "20", "30")], force = F)
+
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

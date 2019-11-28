@@ -4,6 +4,7 @@ method_get <- function(d_config, m_config) {
   if(class(method) == "fbr") {
     method$w_strength <- as.logical(m_config$w_strength)
     method$w_mask <- as.logical(m_config$w_mask)
+    method$fs <- m_config$fs
     
     method$frequency <- d_config$frequency
     
