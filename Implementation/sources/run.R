@@ -220,47 +220,43 @@ run_best <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
 }
 
 run_classify <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
-                                  force = T, parallel = F) {
+                         force = T, parallel = F) {
+  mname <- list(mname = m_configs[[1]]$name)
+  cname <- list(cname = c_configs[[1]]$name)
   for (d_config in d_configs) {
-    for (m_config in m_configs) {
-      for (s_config in s_configs) {
-        for (f_config in f_configs) {
-          for (c_config in c_configs) {
-            if (force ||  !intermediate_exists(d_config,
-                                               "classify",
-                                               m_config,
-                                               s_config,
-                                               f_config,
-                                               c_config)) {
-              run_info("classify", d_config, m_config, s_config, f_config,
-                       c_config)
-              method <- intermediate_read(d_config, "method", m_config)
-              dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
-                                           m_config, s_config)
-              queryset <- intermediate_read(d_config, paste0("scaled-queryset"),
-                                           m_config, s_config)
-            
-              fp <- util_get_filepath(d_config, "dataset", ext = "csv")
-              y <- read.table(fp, header = T, sep = ";")[, "Code"]
-              selected_features <- intermediate_read(d_config,
-                                                     "feature-selection",
-                                                     m_config, s_config,
-                                                     f_config)
-              # Hack for rld
-              selected_features_query <- intersect(selected_features,
-                                                   colnames(queryset))
-              pred <- classify_run(d_config, c_config, method,
-                                   dataset[, selected_features],
-                                   y, queryset[, selected_features_query],
-                                   parallel)
-              
-              intermediate_save(d_config, pred, "classify", m_config, s_config,
-                                f_config, c_config)
-              
-            }
-          }
-        }
-      }
+    if (force ||  !intermediate_exists(d_config,
+                                       "classify",
+                                       mname,
+                                       cname)) {
+      run_info("classify", d_config, mname, cname)
+      validate <- intermediate_read(d_config, "best", mname, cname)
+      m_config <- m_configs[[as.character(validate$mid[1])]]
+      c_config <- c_configs[[as.character(validate$cid[1])]]
+      s_config <- s_configs[[as.character(validate$sid[1])]]
+      f_config <- f_configs[[as.character(validate$fid[1])]]
+      
+      
+      method <- intermediate_read(d_config, "method", m_config)
+      dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
+                                   m_config, s_config)
+      queryset <- intermediate_read(d_config, paste0("scaled-queryset"),
+                                    m_config, s_config)
+      
+      fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+      y <- read.table(fp, header = T, sep = ";")[, "Code"]
+      selected_features <- intermediate_read(d_config,
+                                             "feature-selection",
+                                             m_config, s_config,
+                                             f_config)
+      # Hack for rld
+      selected_features_query <- intersect(selected_features,
+                                           colnames(queryset))
+      pred <- classify_run(d_config, c_config, method,
+                           dataset[, selected_features, drop = F],
+                           y, queryset[, selected_features_query],
+                           parallel)
+      
+      intermediate_save(d_config, pred, "classify", mname, cname)
     }
   }
 }

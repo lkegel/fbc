@@ -7,6 +7,7 @@ tsfresh_convert <- function(d_configs, m_configs, names) {
         fp <- util_get_filepath(d_config, file_name = fn, ext = "csv")
         dt <- fread(fp)
         repr <- as.matrix(dt[, -1, with = F])
+        colnames(repr) <- make.names(colnames(repr))
         intermediate_save(d_config, repr, paste0("represent-", name), m_config)     
       }
     }

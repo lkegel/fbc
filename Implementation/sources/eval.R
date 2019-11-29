@@ -34,7 +34,7 @@ eval_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs)
             y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
             pred <- intermediate_read(d_config, "validate", m_config, s_config,
                                       f_config, c_config)
-            return(acc(y, pred))
+            print(acc(y, pred))
           }
         }
       }
@@ -68,10 +68,19 @@ acc <- function(y, pred) {
 accuracy <- function(d_config, m_config, s_config, f_config, c_config) {
   fp <- util_get_filepath(d_config, "queryset", ext = "csv")
   y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
+  
   pred <- intermediate_read(d_config, "classify", m_config, s_config,
                             f_config, c_config)
   return(acc(y, pred))
 }
+
+accuracy_agg <- function(d_config, mname, cname) {
+  fp <- util_get_filepath(d_config, "queryset", ext = "csv")
+  y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
+  pred <- intermediate_read(d_config, "classify", mname, cname)
+  return(acc(y, pred))
+}
+
 
 eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                 group_name = "d_config", subgroup_name = "s_config",
@@ -111,6 +120,62 @@ eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_co
               }
             }
             
+          }
+        }
+      }
+    }
+  }
+  
+  print(dt)
+  
+  # names(dt) <- c(group_label, subgroup_label, value_label)          
+  eval_barplot_group(as.data.frame(dt),
+                     xlab = group_label,
+                     ylab = value_label,
+                     ylim,
+                     ybreaks,
+                     scale_fill,
+                     plot.margin,
+                     legend.position,
+                     legend.margin,
+                     legend.box.margin,
+                     legend.box.spacing,
+                     legend.key.height)
+  
+  
+}
+
+eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
+                                group_name = "d_config", subgroup_name = "mname",
+                                group_label = "Dataset", subgroup_label = "Method", 
+                                value_fn, value_label, ylim, ybreaks,
+                                scale_fill, plot.margin,
+                                legend.position,
+                                legend.margin,
+                                legend.box.margin,
+                                legend.box.spacing,
+                                legend.key.height,
+                                subgroup_col = "name") {
+  dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
+  for (d_config in d_configs) {
+    for (mname in mnames) {
+      for (cname in cnames) {
+        if (!intermediate_exists(d_config, "classify", mname, cname)) {
+          warning("Intermediate does not exist")
+          next
+        }
+            
+        value <- unname(value_fn(d_config, mname, cname))
+        group <- get(group_name)$name
+        subgroup <- get(subgroup_name)[[subgroup_col]]
+        id <- get(subgroup_name)[[1]]
+        curr_value <- dt[Group == group & Subgroup == subgroup]$Value
+        if (length(curr_value) == 0) {
+          dt <- rbindlist(list(dt, list(group, subgroup, value, id)))  
+        } else {
+          if (curr_value < value) {
+            dt[Group == group & Subgroup == subgroup, Value := value]
+            dt[Group == group & Subgroup == subgroup, Id := id]
           }
         }
       }

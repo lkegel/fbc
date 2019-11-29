@@ -105,32 +105,41 @@ my_knn <- function(method, dataset, y, queryset, k, parallel) {
   I <- nrow(dataset)
   Q <- nrow(queryset)
   
+  stopifnot(k == 1)
+  
   fn <- function(q, I, method, dataset, y, queryset, k) {
     print(q)
+    query <- queryset[q, ]
     distances <- rep(NA, I)
     names(distances) <- as.character(seq(I))
+    mindist <- Inf
+    mindist_i <- 0
     for (i in seq(I)) {
-      distances[i] <- classrepr::mgr_distance(method, dataset[i, ],
-                                              queryset[q, ])
-    }
-    distances <- sort(distances)
-    votes <- y[as.integer(names(distances[1:k]))]
-    if (k == 1) {
-      pred <- votes
-    } else {
-      freq <- table(votes)
-      freq <- sort(freq, decreasing = T)
-      if (freq[1] > freq[2]) {
-        pred <- as.integer(names(freq[1]))
-      } else {
-        stop("todo: Break ties")
+      tempdist <- classrepr::mgr_distance(method, dataset[i, ], query, bsf = mindist)
+      if (tempdist < mindist) {
+        mindist <- tempdist
+        mindist_i <- i
       }
     }
+    pred <- y[mindist_i]
+    
+    return(pred)
+    # if (k == 1) {
+    #   pred <- votes
+    # } else {
+    #   freq <- table(votes)
+    #   freq <- sort(freq, decreasing = T)
+    #   if (freq[1] > freq[2]) {
+    #     pred <- as.integer(names(freq[1]))
+    #   } else {
+    #     stop("todo: Break ties")
+    #   }
+    # }
   }
   
   if (parallel) {
     # Prepare
-    num_cores <- parallel::detectCores() - 1
+    num_cores <- min(32, parallel::detectCores() - 1)
     cl <- parallel::makeCluster(num_cores)
     parallel::clusterEvalQ(cl, library(classrepr))
     parallel::clusterExport(cl,c("I", "method", "dataset", "y", "queryset",
@@ -144,5 +153,5 @@ my_knn <- function(method, dataset, y, queryset, k, parallel) {
                    queryset = queryset, k = k)
   }
   
-  return(as.factor(pred))
+  return(pred)
 }
