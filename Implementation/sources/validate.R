@@ -17,8 +17,8 @@ validate_use <- function(d_config, c_config, method, dataset, y, fit,
     data <- as.data.frame(dataset)
     pred <- unname(predict(fit, data, type = "class"))
   } else if (c_config$name == "gbm") {
-    if (any(is.null(dim(fit$pred)))) {
-      pred <- fit$pred
+    if (fit$params$objective == "binary:logistic") {
+      pred <- round(fit$pred)
     } else {
       pred <- fit$pred[, 1]  
     }
