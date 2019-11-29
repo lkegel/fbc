@@ -167,7 +167,7 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                                      f_config)
 
               pred <- validate_run(d_config, c_config, method,
-                                   dataset[, selected_features],
+                                   dataset[, selected_features, drop = F],
                                    y, parallel)
               
               intermediate_save(d_config, pred, "validate", m_config, s_config,
@@ -181,7 +181,7 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
   }
 }
 
-run_best <- function(d_configs, m_configs, c_configs, s_configs, f_configs,
+run_best <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                      force = T, parallel = F) {
   for (d_config in d_configs) {
     mname <- list(mname = m_configs[[1]]$name)
