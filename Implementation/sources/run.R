@@ -166,8 +166,15 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                                      m_config, s_config,
                                                      f_config)
 
-              pred <- validate_run(d_config, c_config, method,
-                                   dataset[, selected_features, drop = F],
+              dataset_selected <- dataset[, selected_features, drop = F]
+              
+              # Hack for tsfresh: avoid sd = Inf
+              idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
+              if (length(idx_sd_inf) > 0) {
+                dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+              }
+              
+              pred <- validate_run(d_config, c_config, method, dataset_selected,
                                    y, parallel)
               
               intermediate_save(d_config, pred, "validate", m_config, s_config,
@@ -251,10 +258,19 @@ run_classify <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
       # Hack for rld
       selected_features_query <- intersect(selected_features,
                                            colnames(queryset))
-      pred <- classify_run(d_config, c_config, method,
-                           dataset[, selected_features, drop = F],
-                           y, queryset[, selected_features_query],
-                           parallel)
+      
+      dataset_selected <- dataset[, selected_features, drop = F]
+      queryset_selected <- queryset[, selected_features_query, drop = F]
+      
+      # Hack for tsfresh: avoid sd = Inf
+      idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
+      if (length(idx_sd_inf) > 0) {
+        dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+        queryset_selected <- queryset_selected[, -idx_sd_inf, drop = F]
+      }
+    
+      pred <- classify_run(d_config, c_config, method, dataset_selected,
+                           y, queryset_selected, parallel)
       
       intermediate_save(d_config, pred, "classify", mname, cname)
     }
