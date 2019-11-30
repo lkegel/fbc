@@ -141,7 +141,11 @@ run_feature_selection <- function(d_configs, m_configs, s_configs, f_configs,
 }
 
 run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
-                         force = T, parallel = F) {
+                         force = T, parallel = F, loop_parallel = F) {
+  if (isTRUE(parallel) && isTRUE(loop_parallel)) stop("N/A")
+  all_configs <- list()
+  idx <- 1
+  
   for (d_config in d_configs) {
     for (m_config in m_configs) {
       for (s_config in s_configs) {
@@ -153,42 +157,72 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                                s_config,
                                                f_config,
                                                c_config)) {
-              run_info("validate", d_config, m_config, s_config, f_config,
-                       c_config)
-              method <- intermediate_read(d_config, "method", m_config)
-              dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
-                                           m_config, s_config)
-              
-              fp <- util_get_filepath(d_config, "dataset", ext = "csv")
-              y <- read.table(fp, header = T, sep = ";")[, "Code"]
-              if (class(method) != "rld") {
-                selected_features <- intermediate_read(d_config,
-                                                       "feature-selection",
-                                                       m_config, s_config,
-                                                       f_config)
-                
-                dataset_selected <- dataset[, selected_features, drop = F]
-                
-                # Hack for tsfresh: avoid sd = Inf
-                idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
-                if (length(idx_sd_inf) > 0) {
-                  dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
-                }
-              } else {
-                dataset_selected <- dataset
-              }
-              
-              pred <- validate_run(d_config, c_config, method, dataset_selected,
-                                   y, parallel)
-              
-              intermediate_save(d_config, pred, "validate", m_config, s_config,
-                                f_config, c_config)
-              
+              all_configs[[idx]] <- list(D = d_config,
+                                         M = m_config,
+                                         S = s_config,
+                                         F = f_config,
+                                         C = c_config)
+              idx <- idx + 1
             }
           }
         }
       }
     }
+  }
+
+  run_fn <- function(all_config) {
+    d_config <- all_config$D
+    m_config <- all_config$M
+    s_config <- all_config$S
+    f_config <- all_config$F
+    c_config <- all_config$C
+    
+    run_info("validate", d_config, m_config, s_config, f_config,
+             c_config)
+    method <- intermediate_read(d_config, "method", m_config)
+    dataset <- intermediate_read(d_config, paste0("scaled-dataset"),
+                                 m_config, s_config)
+    
+    fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+    y <- read.table(fp, header = T, sep = ";")[, "Code"]
+    if (class(method) != "rld") {
+      selected_features <- intermediate_read(d_config,
+                                             "feature-selection",
+                                             m_config, s_config,
+                                             f_config)
+      
+      dataset_selected <- dataset[, selected_features, drop = F]
+      
+      # Hack for tsfresh: avoid sd = Inf
+      idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
+      if (length(idx_sd_inf) > 0) {
+        dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+      }
+    } else {
+      dataset_selected <- dataset
+    }
+    
+    pred <- validate_run(d_config, c_config, method, dataset_selected,
+                         y, parallel)
+    
+    intermediate_save(d_config, pred, "validate", m_config, s_config,
+                      f_config, c_config)
+  }
+  
+  if (parallel) {
+    tf <- tmpfile()
+    print(paste("Validation Tempfile:", tf))
+    num_cores <- min(32, parallel::detectCores() - 1)
+    cl <- parallel::makeCluster(num_cores, outfile = tf)
+    parallel::clusterEvalQ(cl, setwd(file.path(Sys.getenv("FBC"))))
+    parallel::clusterEvalQ(cl, source("Implementation/init.R"))
+    
+    parallel::parLapplyLB(cl, all_configs, run_fn)
+    
+    parallel::stopCluster(cl)
+    unlink(tf)
+  } else {
+    lapply(all_configs, run_fn)
   }
 }
 
