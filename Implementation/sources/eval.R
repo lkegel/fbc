@@ -92,7 +92,8 @@ eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_co
                                 legend.box.margin,
                                 legend.box.spacing,
                                 legend.key.height,
-                                subgroup_col = "name") {
+                                subgroup_col = "name",
+                                group_col = "name") {
   dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
   for (d_config in d_configs) {
     for (m_config in m_configs) {
@@ -107,7 +108,7 @@ eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_co
             }
             
             value <- unname(value_fn(d_config, m_config, s_config, f_config, c_config))
-            group <- get(group_name)$name
+            group <- get(group_name)[[group_col]]
             subgroup <- get(subgroup_name)[[subgroup_col]]
             id <- get(subgroup_name)[[1]]
             curr_value <- dt[Group == group & Subgroup == subgroup]$Value
@@ -155,7 +156,8 @@ eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
                                 legend.box.margin,
                                 legend.box.spacing,
                                 legend.key.height,
-                                subgroup_col = "name") {
+                                subgroup_col = "name",
+                                group_col = "name") {
   dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
   for (d_config in d_configs) {
     for (mname in mnames) {
@@ -166,7 +168,7 @@ eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
         }
             
         value <- unname(value_fn(d_config, mname, cname))
-        group <- get(group_name)$name
+        group <- get(group_name)[[group_col]]
         subgroup <- get(subgroup_name)[[subgroup_col]]
         id <- get(subgroup_name)[[1]]
         curr_value <- dt[Group == group & Subgroup == subgroup]$Value
