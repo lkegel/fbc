@@ -88,7 +88,7 @@ classify_use <- function(d_config, c_config, method, dataset, y, queryset, fit,
     pred <- unname(predict(fit, data, type = "class"))
   } else if (c_config$name == "gbm") {
     data <- as.matrix(queryset)
-    pred <- predict(fit, data)
+    pred <- round(predict(fit, data))
     # pred <- as.factor(sort(names(table(y)))[])
     # pred <- matrix(pred, ncol=num_class, byrow=TRUE)
     # pred <- as.factor(max.col(pred))
