@@ -115,7 +115,11 @@ my_knn <- function(method, dataset, y, queryset, k, parallel) {
     mindist <- Inf
     mindist_i <- 0
     for (i in seq(I)) {
-      tempdist <- classrepr::mgr_distance(method, dataset[i, ], query, bsf = mindist)
+      if (class(method) == "rld") {
+        tempdist <- classrepr::mgr_distance(method, dataset[i, ], query) 
+      } else {
+        tempdist <- classrepr::mgr_distance(method, dataset[i, ], query, bsf = mindist)  
+      }
       if (tempdist < mindist) {
         mindist <- tempdist
         mindist_i <- i

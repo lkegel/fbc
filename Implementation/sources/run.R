@@ -161,17 +161,21 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
               
               fp <- util_get_filepath(d_config, "dataset", ext = "csv")
               y <- read.table(fp, header = T, sep = ";")[, "Code"]
-              selected_features <- intermediate_read(d_config,
-                                                     "feature-selection",
-                                                     m_config, s_config,
-                                                     f_config)
-
-              dataset_selected <- dataset[, selected_features, drop = F]
-              
-              # Hack for tsfresh: avoid sd = Inf
-              idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
-              if (length(idx_sd_inf) > 0) {
-                dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+              if (class(method) != "rld") {
+                selected_features <- intermediate_read(d_config,
+                                                       "feature-selection",
+                                                       m_config, s_config,
+                                                       f_config)
+                
+                dataset_selected <- dataset[, selected_features, drop = F]
+                
+                # Hack for tsfresh: avoid sd = Inf
+                idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
+                if (length(idx_sd_inf) > 0) {
+                  dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+                }
+              } else {
+                dataset_selected <- dataset
               }
               
               pred <- validate_run(d_config, c_config, method, dataset_selected,
@@ -236,11 +240,11 @@ run_classify <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                                        mname,
                                        cname)) {
       run_info("classify", d_config, mname, cname)
-      validate <- intermediate_read(d_config, "best", mname, cname)
-      m_config <- m_configs[[as.character(validate$mid[1])]]
-      c_config <- c_configs[[as.character(validate$cid[1])]]
-      s_config <- s_configs[[as.character(validate$sid[1])]]
-      f_config <- f_configs[[as.character(validate$fid[1])]]
+      best <- intermediate_read(d_config, "best", mname, cname)
+      m_config <- m_configs[[as.character(best$mid[1])]]
+      c_config <- c_configs[[as.character(best$cid[1])]]
+      s_config <- s_configs[[as.character(best$sid[1])]]
+      f_config <- f_configs[[as.character(best$fid[1])]]
       
       
       method <- intermediate_read(d_config, "method", m_config)
@@ -251,22 +255,27 @@ run_classify <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
       
       fp <- util_get_filepath(d_config, "dataset", ext = "csv")
       y <- read.table(fp, header = T, sep = ";")[, "Code"]
-      selected_features <- intermediate_read(d_config,
-                                             "feature-selection",
-                                             m_config, s_config,
-                                             f_config)
-      # Hack for rld
-      selected_features_query <- intersect(selected_features,
-                                           colnames(queryset))
-      
-      dataset_selected <- dataset[, selected_features, drop = F]
-      queryset_selected <- queryset[, selected_features_query, drop = F]
-      
-      # Hack for tsfresh: avoid sd = Inf
-      idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
-      if (length(idx_sd_inf) > 0) {
-        dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
-        queryset_selected <- queryset_selected[, -idx_sd_inf, drop = F]
+      if (class(method) == "rld") {
+        dataset_selected <- dataset
+        queryset_selected <- queryset
+      } else {
+        selected_features <- intermediate_read(d_config,
+                                               "feature-selection",
+                                               m_config, s_config,
+                                               f_config)
+        # Hack for rld
+        selected_features_query <- intersect(selected_features,
+                                             colnames(queryset))
+        
+        dataset_selected <- dataset[, selected_features, drop = F]
+        queryset_selected <- queryset[, selected_features_query, drop = F]
+        
+        # Hack for tsfresh: avoid sd = Inf
+        idx_sd_inf <- which(is.infinite(apply(dataset_selected, 2, sd)))
+        if (length(idx_sd_inf) > 0) {
+          dataset_selected <- dataset_selected[, -idx_sd_inf, drop = F]
+          queryset_selected <- queryset_selected[, -idx_sd_inf, drop = F]
+        }
       }
     
       pred <- classify_run(d_config, c_config, method, dataset_selected,
