@@ -209,7 +209,7 @@ run_validate <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
                       f_config, c_config)
   }
   
-  if (parallel) {
+  if (loop_parallel) {
     tf <- tmpfile()
     print(paste("Validation Tempfile:", tf))
     num_cores <- min(32, parallel::detectCores() - 1)
