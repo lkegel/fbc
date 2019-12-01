@@ -30,7 +30,7 @@ validate_use <- function(d_config, c_config, method, dataset, y, fit,
     folds <- split_fold(y, fold)
     pred <- rep(NA, length(y))
     for (this_fold in folds) {
-      pred[this_fold] <- my_knn(method, dataset[-this_fold, ], y[-this_fold], dataset[this_fold, ], c_config$k, parallel)
+      pred[this_fold] <- my_knn(method, dataset[-this_fold, , drop = F], y[-this_fold], dataset[this_fold, , drop = F], c_config$k, parallel)
     }
   } else {
     stop("N/A")
