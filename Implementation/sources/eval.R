@@ -65,11 +65,11 @@ acc <- function(y, pred) {
   return(unname(cm$overall["Accuracy"]))
 }
 
-accuracy <- function(d_config, m_config, s_config, f_config, c_config) {
-  fp <- util_get_filepath(d_config, "queryset", ext = "csv")
+accuracy <- function(d_config, m_config, s_config, f_config, c_config, intermediate, dataset) {
+  fp <- util_get_filepath(d_config, dataset, ext = "csv")
   y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
   
-  pred <- intermediate_read(d_config, "classify", m_config, s_config,
+  pred <- intermediate_read(d_config, intermediate, m_config, s_config,
                             f_config, c_config)
   return(acc(y, pred))
 }
@@ -82,7 +82,7 @@ accuracy_agg <- function(d_config, mname, cname) {
 }
 
 
-eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_configs,
+eval_group_subgroup <- function(all_configs,
                                 group_name = "d_config", subgroup_name = "s_config",
                                 group_label = "Dataset", subgroup_label = "Scaling", 
                                 value_fn, value_label, ylim, ybreaks,
@@ -93,39 +93,44 @@ eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_co
                                 legend.box.spacing,
                                 legend.key.height,
                                 subgroup_col = "name",
-                                group_col = "name") {
+                                group_col = "name",
+                                intermediate = "classify",
+                                dataset = "queryset") {
   dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
-  for (d_config in d_configs) {
-    for (m_config in m_configs) {
-      for (s_config in s_configs) {
-        for (f_config in f_configs) {
-          for (c_config in c_configs) {
-            
-            if (!intermediate_exists(d_config, "classify", m_config, s_config,
-                              f_config, c_config)) {
-              warning("Intermediate does not exist")
-              next
-            }
-            
-            value <- unname(value_fn(d_config, m_config, s_config, f_config, c_config))
-            group <- get(group_name)[[group_col]]
-            subgroup <- get(subgroup_name)[[subgroup_col]]
-            id <- get(subgroup_name)[[1]]
-            curr_value <- dt[Group == group & Subgroup == subgroup]$Value
-            if (length(curr_value) == 0) {
-              dt <- rbindlist(list(dt, list(group, subgroup, value, id)))  
-            } else {
-              if (curr_value < value) {
-                dt[Group == group & Subgroup == subgroup, Value := value]
-                dt[Group == group & Subgroup == subgroup, Id := id]
+  for(all_config in all_configs) {
+    for (d_config in all_config[[1]]) {
+      for (m_config in all_config[[2]]) {
+        for (s_config in all_config[[3]]) {
+          for (f_config in all_config[[4]]) {
+            for (c_config in all_config[[5]]) {
+              
+              if (!intermediate_exists(d_config, intermediate, m_config, s_config,
+                                       f_config, c_config)) {
+                warning("Intermediate does not exist")
+                next
               }
+              
+              value <- unname(value_fn(d_config, m_config, s_config, f_config, c_config, intermediate, dataset))
+              group <- get(group_name)[[group_col]]
+              subgroup <- get(subgroup_name)[[subgroup_col]]
+              id <- get(subgroup_name)[[1]]
+              curr_value <- dt[Group == group & Subgroup == subgroup]$Value
+              if (length(curr_value) == 0) {
+                dt <- rbindlist(list(dt, list(group, subgroup, value, id)))  
+              } else {
+                if (curr_value < value) {
+                  dt[Group == group & Subgroup == subgroup, Value := value]
+                  dt[Group == group & Subgroup == subgroup, Id := id]
+                }
+              }
+              
             }
-            
           }
         }
       }
     }
   }
+  
   
   print(dt)
   
@@ -142,8 +147,6 @@ eval_group_subgroup <- function(d_configs, m_configs, s_configs, f_configs, c_co
                      legend.box.margin,
                      legend.box.spacing,
                      legend.key.height)
-  
-  
 }
 
 eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
