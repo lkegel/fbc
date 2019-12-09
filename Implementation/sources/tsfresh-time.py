@@ -1,9 +1,23 @@
 import io
 import sys
 import struct
+
+import os
+
+os.environ.update(
+        OMP_NUM_THREADS = '1',
+        OPENBLAS_NUM_THREADS = '1',
+        NUMEXPR_NUM_THREADS = '1',
+        MKL_NUM_THREADS = '1',
+    )
+    
 import pandas as pd
 import numpy as np
+
+
+import threading
 import tsfresh
+from tsfresh.feature_extraction import EfficientFCParameters
 import rpy2.robjects as robjects
 from rpy2.robjects import pandas2ri
 import time
@@ -12,14 +26,12 @@ if __name__ == "__main__":
     path = sys.argv[1]
     fn_dataset = sys.argv[2]
     fn_time = sys.argv[3]
-    fn_result = sys.argv[4]
-    I = int(sys.argv[5])
-    T = int(sys.argv[6])
-    n_jobs = int(sys.argv[7])
+    I = int(sys.argv[4])
+    T = int(sys.argv[5])
+    n_jobs = int(sys.argv[6])
 
     fp_dataset = path + "/" + fn_dataset
     fp_time = path + "/" + fn_time
-    fn_result = path + "/" + fn_result
 
     struct_format = str(I * T) + 'd'
     struct_size = I * T * 8
@@ -40,8 +52,11 @@ if __name__ == "__main__":
 
     print(dataset.head())
     print(dataset.tail())
+    
+    settings = EfficientFCParameters()
 
+    
     start_time = time.time()
     extracted_features = tsfresh.extract_features(dataset, column_id="id", column_sort="time",
-                                                  disable_progressbar = False, show_warnings = False, n_jobs = n_jobs)
+                                                  disable_progressbar = False, show_warnings = False, n_jobs = n_jobs, default_fc_parameters = settings)
     print("--- %s seconds ---" % (time.time() - start_time))
