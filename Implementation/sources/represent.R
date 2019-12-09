@@ -24,7 +24,6 @@ represent <- function(dataset, method, parallel) {
       dsl <- classrepr::mgr_dec(method, dataset)
     } else {
       dsl <- lapply(as.list(seq(nrow(dataset))), function(i) {
-        print(i)
         classrepr::mgr_dec(method, dataset[i, ])
       })
     }
@@ -40,7 +39,6 @@ represent <- function(dataset, method, parallel) {
       colnames(repr) <- names(fs)
       repr[1, ] <- fs 
       for (i in seq_along(dsl)[-1]) {
-        print(i)
         row <- classrepr::mgr_red(method, dsl[[i]])
         while (ncol(repr) < length(row)) {
           repr <- cbind(repr, NA_real_)

@@ -71,16 +71,15 @@ accuracy <- function(d_config, m_config, s_config, f_config, c_config, intermedi
   
   pred <- intermediate_read(d_config, intermediate, m_config, s_config,
                             f_config, c_config)
-  return(acc(y, pred))
+  return(acc(y, pred) * 100)
 }
 
-accuracy_agg <- function(d_config, mname, cname) {
-  fp <- util_get_filepath(d_config, "queryset", ext = "csv")
+accuracy_agg <- function(d_config, mname, cname, intermediate, dataset) {
+  fp <- util_get_filepath(d_config, dataset, ext = "csv")
   y <- as.factor(read.table(fp, header = T, sep = ";")[, "Code"])
-  pred <- intermediate_read(d_config, "classify", mname, cname)
-  return(acc(y, pred))
+  pred <- intermediate_read(d_config, intermediate, mname, cname)
+  return(acc(y, pred) * 100)
 }
-
 
 eval_group_subgroup <- function(all_configs,
                                 group_name = "d_config", subgroup_name = "s_config",
@@ -95,35 +94,95 @@ eval_group_subgroup <- function(all_configs,
                                 subgroup_col = "name",
                                 group_col = "name",
                                 intermediate = "classify",
-                                dataset = "queryset") {
-  dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
+                                dataset = "queryset",
+                                group_levels,
+                                subgroup_levels,
+                                group_labels = NULL,
+                                subgroup_labels = NULL,
+                                fn = NULL,
+                                width = NULL,
+                                height = NULL,
+                                w_feature = F,
+                                agg = F) {
+  dt <- data.table(Group = character(), Subgroup = character(),
+                   Value = numeric(), Id = numeric(), Feature = character())
   for(all_config in all_configs) {
-    for (d_config in all_config[[1]]) {
-      for (m_config in all_config[[2]]) {
-        for (s_config in all_config[[3]]) {
-          for (f_config in all_config[[4]]) {
-            for (c_config in all_config[[5]]) {
-              
-              if (!intermediate_exists(d_config, intermediate, m_config, s_config,
-                                       f_config, c_config)) {
-                warning("Intermediate does not exist")
-                next
+    if (agg) {
+      for (d_config in all_config[[1]]) {
+        for (mname in all_config[[2]]) {
+          for (cname in all_config[[3]]) {
+            if (!intermediate_exists(d_config, "classify", mname, cname)) {
+              warning("Intermediate does not exist")
+              next
+            }
+            
+            if (intermediate_exists(d_config, "best", mname, cname)) {
+              best <- intermediate_read(d_config, "best", mname, cname)
+              m_config <- list(mid = best$mid[1])
+              c_config <- list(cid = best$cid[1])
+              s_config <- list(sid = best$sid[1])
+              f_config <- list(fid = best$fid[1])
+              n_features <- length(intermediate_read(d_config, "feature-selection",
+                                                     m_config, s_config, f_config))
+              if (m_config$mid == 20) {
+                n_features <- "*"
               }
+            } else {
+              if (mname == "raw")
+                n_features <- "T"
+              else
+                n_features <- "?"
+            }
+            
+            value <- unname(value_fn(d_config, mname, cname, intermediate, dataset))
+            group <- get(group_name)[[group_col]]
+            subgroup <- get(subgroup_name)[[subgroup_col]]
+            id <- get(subgroup_name)[[1]]
+            curr_value <- dt[Group == group & Subgroup == subgroup]$Value
+            if (length(curr_value) == 0) {
+              dt <- rbindlist(list(dt, list(group, subgroup, value, id, n_features)))  
+            } else {
+              if (curr_value < value) {
+                dt[Group == group & Subgroup == subgroup, Value := value]
+                dt[Group == group & Subgroup == subgroup, Id := id]
+                dt[Group == group & Subgroup == subgroup, Feature := n_features]
+              }
+            }
+          }
+        }
+      }
+    } else {
+      for (d_config in all_config[[1]]) {
+        for (m_config in all_config[[2]]) {
+          for (s_config in all_config[[3]]) {
+            for (f_config in all_config[[4]]) {
               
-              value <- unname(value_fn(d_config, m_config, s_config, f_config, c_config, intermediate, dataset))
-              group <- get(group_name)[[group_col]]
-              subgroup <- get(subgroup_name)[[subgroup_col]]
-              id <- get(subgroup_name)[[1]]
-              curr_value <- dt[Group == group & Subgroup == subgroup]$Value
-              if (length(curr_value) == 0) {
-                dt <- rbindlist(list(dt, list(group, subgroup, value, id)))  
-              } else {
-                if (curr_value < value) {
-                  dt[Group == group & Subgroup == subgroup, Value := value]
-                  dt[Group == group & Subgroup == subgroup, Id := id]
+              n_features <- length(intermediate_read(d_config, "feature-selection",
+                                                     m_config, s_config, f_config))
+              
+              for (c_config in all_config[[5]]) {
+                
+                if (!intermediate_exists(d_config, intermediate, m_config, s_config,
+                                         f_config, c_config)) {
+                  warning("Intermediate does not exist")
+                  next
+                }
+                
+                value <- unname(value_fn(d_config, m_config, s_config, f_config, c_config, intermediate, dataset))
+                group <- get(group_name)[[group_col]]
+                subgroup <- get(subgroup_name)[[subgroup_col]]
+                id <- get(subgroup_name)[[1]]
+                curr_value <- dt[Group == group & Subgroup == subgroup]$Value
+                if (length(curr_value) == 0) {
+                  dt <- rbindlist(list(dt, list(group, subgroup, value, id, n_features)))  
+                } else {
+                  if (curr_value < value) {
+                    dt[Group == group & Subgroup == subgroup, Value := value]
+                    dt[Group == group & Subgroup == subgroup, Id := id]
+                    dt[Group == group & Subgroup == subgroup, Feature := n_features]
+                  }
                 }
               }
-              
             }
           }
         }
@@ -131,64 +190,21 @@ eval_group_subgroup <- function(all_configs,
     }
   }
   
+  if (any(is.null(group_labels)))
+    group_labels <- group_levels
+  dt$Group <- factor(dt$Group, levels = group_levels, labels = group_labels)
+  
+  if (any(is.null(subgroup_labels)))
+    subgroup_labels <- subgroup_levels
+  dt$Subgroup <- factor(dt$Subgroup, levels = subgroup_levels, labels = subgroup_labels)
   
   print(dt)
   
-  # names(dt) <- c(group_label, subgroup_label, value_label)          
-  eval_barplot_group(as.data.frame(dt),
-                     xlab = group_label,
-                     ylab = value_label,
-                     ylim,
-                     ybreaks,
-                     scale_fill,
-                     plot.margin,
-                     legend.position,
-                     legend.margin,
-                     legend.box.margin,
-                     legend.box.spacing,
-                     legend.key.height)
-}
-
-eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
-                                group_name = "d_config", subgroup_name = "mname",
-                                group_label = "Dataset", subgroup_label = "Method", 
-                                value_fn, value_label, ylim, ybreaks,
-                                scale_fill, plot.margin,
-                                legend.position,
-                                legend.margin,
-                                legend.box.margin,
-                                legend.box.spacing,
-                                legend.key.height,
-                                subgroup_col = "name",
-                                group_col = "name") {
-  dt <- data.table(Group = character(), Subgroup = character(), Value = numeric(), Id = numeric())
-  for (d_config in d_configs) {
-    for (mname in mnames) {
-      for (cname in cnames) {
-        if (!intermediate_exists(d_config, "classify", mname, cname)) {
-          warning("Intermediate does not exist")
-          next
-        }
-            
-        value <- unname(value_fn(d_config, mname, cname))
-        group <- get(group_name)[[group_col]]
-        subgroup <- get(subgroup_name)[[subgroup_col]]
-        id <- get(subgroup_name)[[1]]
-        curr_value <- dt[Group == group & Subgroup == subgroup]$Value
-        if (length(curr_value) == 0) {
-          dt <- rbindlist(list(dt, list(group, subgroup, value, id)))  
-        } else {
-          if (curr_value < value) {
-            dt[Group == group & Subgroup == subgroup, Value := value]
-            dt[Group == group & Subgroup == subgroup, Id := id]
-          }
-        }
-      }
-    }
+  if (!is.null(fn)) {
+    fp <- file.path("Plots", fn)
+    pdf(fp, width = width, height = height, family = font_family)
   }
   
-  print(dt)
-  
   # names(dt) <- c(group_label, subgroup_label, value_label)          
   eval_barplot_group(as.data.frame(dt),
                      xlab = group_label,
@@ -201,9 +217,13 @@ eval_group_subgroup_agg <- function(d_configs, mnames, cnames,
                      legend.margin,
                      legend.box.margin,
                      legend.box.spacing,
-                     legend.key.height)
+                     legend.key.height,
+                     w_feature)
   
-  
+  if (!is.null(fn)) {
+    dev.off()
+    embed_fonts(fp, options = "-dCompatibilityLevel=1.4")  
+  }
 }
 
 eval_barplot_group <- function(df,
@@ -217,9 +237,14 @@ eval_barplot_group <- function(df,
                                legend.margin,
                                legend.box.margin,
                                legend.box.spacing,
-                               legend.key.height) {
+                               legend.key.height,
+                               w_feature = F) {
   p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
-  p <- p + geom_col(position = "dodge2")
+  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
+  if (w_feature) {
+    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
+                       position = position_dodge2(width = 0.9))
+  }
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
@@ -236,6 +261,9 @@ eval_barplot_group <- function(df,
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Format -----------------------------------------------------------------------
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+widths_in <- c(15, 7.5, 5) / 2.54
+heights_in <- c(9.27, 4.63, 3.09) / 2.54
+
 width_in_2 <- 1.48
 height_in_2 <- 1.04
 height_in_2_heat <- 1.31
@@ -251,7 +279,7 @@ if ("Linux Libertine" %in% fonts()) {
 
 # run once font_import()
 # run once loadfonts() and make sure Linux Libertine is loaded
-eval_color <- c("#2b83ba", "#d7191c", "#fc8003", "#429537", "#606060")
+eval_color <- c("#2b83ba", "#d7191c", "#fc8003", "#429537", "#606060", "#000000")
 eval_scale_color <- scale_color_manual(values = eval_color)
 
 eval_theme <- theme(
