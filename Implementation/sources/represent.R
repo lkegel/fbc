@@ -19,7 +19,7 @@ represent <- function(dataset, method, parallel) {
     }
   } else {
     # Decomposition
-    start <- idxrepr::tic()
+    start <- tictoc::tic()
     if (mgr_is_vectorized(method)) {
       dsl <- classrepr::mgr_dec(method, dataset)
     } else {
@@ -27,10 +27,10 @@ represent <- function(dataset, method, parallel) {
         classrepr::mgr_dec(method, dataset[i, ])
       })
     }
-    duration_dec <- idxrepr::toc(start)
+    duration_dec <- tictoc::toc(start)
     
     # Reduction
-    start <- idxrepr::tic()
+    start <- tictoc::tic()
     if (mgr_is_vectorized(method)) {
       repr <- classrepr::mgr_red(method, dsl)
     } else {
@@ -47,7 +47,7 @@ represent <- function(dataset, method, parallel) {
         repr[i, ] <- c(row, rep(NA, ncol(repr) - length(row)))
       }
     }
-    duration_red <- idxrepr::toc(start)
+    duration_red <- tictoc::toc(start)
     
     print(paste("Duration for Decomposition:", duration_dec))
     print(paste("Duration for Reduction:", duration_red))

@@ -5,14 +5,14 @@ classify_run <- function(d_config, c_config, method, dataset, y, queryset,
   names(y_map) <- as.character(labels)
   labels_mapped <- unname(y_map[as.character(y)])
   
-  start <- idxrepr::tic()
+  start <- tictoc::tic()
   fit <- classify_estimate(d_config, c_config, dataset, labels_mapped, parallel)
-  duration_train <- idxrepr::toc(start)
+  duration_train <- tictoc::toc(start)
   
-  start <- idxrepr::tic()
+  start <- tictoc::tic()
   pred <- classify_use(d_config, c_config, method, dataset, labels_mapped, queryset, fit,
                        parallel)
-  duration_test <- idxrepr::toc(start)
+  duration_test <- tictoc::toc(start)
   
   print(paste("Duration for Train:", duration_train))
   print(paste("Duration for Test:", duration_test))

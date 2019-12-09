@@ -12,7 +12,7 @@ source("Implementation/init.R")
 run_method(d, m)
 # 80 - is done separately
 run_represent(d, m[c("10", "11", "12", "13", "14", "15", "20", "30")], force = F)
-run_represent(d[3], m["14"], force = T, parallel = F)
+run_represent(d[2:3], m[c("14", "20", "30")], force = T, parallel = F)
 # rld and dwt are not scaled or imputed
 run_scale(d, m[c("10", "11", "12", "13", "14", "15", "80")], s[c("1", "2", "3", "5")], force = F)
 run_scale(d, m[c("20", "30")], s["4"])
