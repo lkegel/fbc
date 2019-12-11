@@ -12,22 +12,25 @@ source("Implementation/init.R")
 run_method(d, m)
 # 80 - is done separately
 run_represent(d, m[c("10", "11", "12", "13", "14", "15", "20", "30")], force = F)
-run_represent(d[2:3], m[c("14", "20", "30")], force = T, parallel = F)
+run_represent(d[2], m[c("14", "20", "30")], force = T, parallel = F)
+run_represent(d[3], m["30"], force = T, parallel = F)
 # rld and dwt are not scaled or imputed
 run_scale(d, m[c("10", "11", "12", "13", "14", "15", "80")], s[c("1", "2", "3", "5")], force = F)
+run_scale(d[2], m["14"], s["5"], force = T)
 run_scale(d, m[c("20", "30")], s["4"])
 
 # run_feature_selection(d, m[c("10", "11", "12", "80")], s[c("1", "2", "3", "5")],
 #                       f[c("1", "1010", "1020", "1030", "1037", "1040", "1050", "1060", "1070", "1073", "1080", "1090", "8000")], force = F, parallel = T)
 run_feature_selection(d, m[c("13", "14", "15", "80")], s[c("1", "2", "3", "5")],
                       f[c("1", "1399", "8000")], force = F, parallel = F)
+run_feature_selection(d[2], m["14"], s["1"], f["1"], force = T, parallel = F)
 run_feature_selection(d, m["20"], s["4"], f["1"], force = F, parallel = F)
 run_feature_selection(d, m["30"], s["4"], f[c("3002", "3004", "3008", "3016")], force = F, parallel = T)
 run_feature_selection(d[1:2], m["30"], s["4"], f[c("3006", "3073")], force = F, parallel = T)
 run_feature_selection(d["3"], m["30"], s["4"], f["3037"], force = F, parallel = T)
 run_feature_selection(d, m["30"], s["4"], f["1"], force = F, parallel = F)
 
-eval_feature_selection(d[2:3], m["14"], s["2"], f[c("1", "1399", "8000")])
+run_feature_selection(d[2], m["80"], s["4"], f["8000"], force = T, parallel = F)
 
 run_validate(d, m[c("13", "14", "15", "80")], s[c("1", "2", "3", "5")], f[c("1", "1399", "8000")], c[c("10", "20", "30")], force = F, parallel = F)
 run_validate(d, m[c("13", "14", "15", "80")], s[c("1", "2", "3", "5")], f[c("1", "1399", "8000")], c[as.character(seq(3001, 3030))], force = F, parallel = F)
@@ -132,7 +135,7 @@ eval_group_subgroup_agg(d[2:3], mnames, cnames,
 
 # Eval eager per d and r
 mnames <- list(list(mname = "fbr"), list(mname = "tsfresh"), list(mname = "dwt"))
-cnames <- list(list(cname = "gbm"), list(cname = "svm"), list(cname = "gbm"))
+cnames <- list(list(cname = "gbm"))#, list(cname = "svm"), list(cname = "gbm"))
 eval_group_subgroup(list(list(d[2:3], mnames, cnames)),
                     group_name = "d_config", subgroup_name = "mname",
                     group_label = "Dataset", subgroup_label = "Method",
@@ -587,3 +590,41 @@ eval_group_subgroup(list(list(d, m["80"], s["1"], f["1"], c["10"]),
                     group_col = "did",
                     intermediate = "validate",
                     dataset = "dataset")
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# +++++++++++ ------------------------------------------------------------------
+# Runtime ----------------------------------------------------------------------
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+eval_runtime(xlab = NULL, ylab = "Runtime (s)",
+             scale_fill = scale_fill_manual(values = eval_color[1:6]),
+             plot.margin = unit(c(4, 2, 1, 1.7), "mm"),
+             legend.position = c(0, 1.05),
+             legend.margin = margin(0, 0, 0, 0, "mm"),
+             legend.box.margin = margin(1, 1, 1, 1, "mm"),
+             legend.box.spacing = unit(0, "mm"),
+             legend.key.height = unit(2, "mm"),
+             width = widths_in[1],
+             height = heights_in[1],
+             fn = "runtime.pdf")
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# +++++++++++ ------------------------------------------------------------------
+# Runtime vs. Accuracy ---------------------------------------------------------
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+eval_acc_vs_run(scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
+                legend.position = c(0, 1.015),
+                legend.margin = margin(0, 0, 0, 0, "mm"),
+                legend.box.margin = margin(1, 1, 1, 1, "mm"),
+                legend.box.spacing = unit(0, "mm"),
+                legend.key.height = unit(2, "mm"),
+                width = widths_in[2],
+                height = heights_in[2],
+                fn = "acc_vs_run_payment.pdf",
+                group = "Payment",
+                xlim = c(50, 110))
+
+
+plot(dt[Group == "Metering"]$Value, log(dt[Group == "Metering"]$Runtime))
+

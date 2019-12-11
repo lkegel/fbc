@@ -81,29 +81,19 @@ accuracy_agg <- function(d_config, mname, cname, intermediate, dataset) {
   return(acc(y, pred) * 100)
 }
 
-eval_group_subgroup <- function(all_configs,
-                                group_name = "d_config", subgroup_name = "s_config",
-                                group_label = "Dataset", subgroup_label = "Scaling", 
-                                value_fn, value_label, ylim, ybreaks,
-                                scale_fill, plot.margin,
-                                legend.position,
-                                legend.margin,
-                                legend.box.margin,
-                                legend.box.spacing,
-                                legend.key.height,
-                                subgroup_col = "name",
-                                group_col = "name",
-                                intermediate = "classify",
-                                dataset = "queryset",
-                                group_levels,
-                                subgroup_levels,
-                                group_labels = NULL,
-                                subgroup_labels = NULL,
-                                fn = NULL,
-                                width = NULL,
-                                height = NULL,
-                                w_feature = F,
-                                agg = F) {
+get_group_subgroup <- function(all_configs,
+                               group_name,
+                               subgroup_name,
+                               value_fn,
+                               intermediate,
+                               dataset,
+                               group_col = "name",
+                               subgroup_col = "name",
+                               group_levels,
+                               subgroup_levels,
+                               group_labels,
+                               subgroup_labels,
+                               agg) {
   dt <- data.table(Group = character(), Subgroup = character(),
                    Value = numeric(), Id = numeric(), Feature = character())
   for(all_config in all_configs) {
@@ -122,8 +112,8 @@ eval_group_subgroup <- function(all_configs,
               c_config <- list(cid = best$cid[1])
               s_config <- list(sid = best$sid[1])
               f_config <- list(fid = best$fid[1])
-              n_features <- length(intermediate_read(d_config, "feature-selection",
-                                                     m_config, s_config, f_config))
+              n_features <- as.character(length(intermediate_read(d_config, "feature-selection",
+                                                     m_config, s_config, f_config)))
               if (m_config$mid == 20) {
                 n_features <- "*"
               }
@@ -199,6 +189,79 @@ eval_group_subgroup <- function(all_configs,
   dt$Subgroup <- factor(dt$Subgroup, levels = subgroup_levels, labels = subgroup_labels)
   
   print(dt)
+  return(dt)
+}
+
+get_runtime <- function() {
+  df <- openxlsx::read.xlsx("Evaluation/Eval.xlsx", "RuntimeDF")
+  df$Subgroup2 <- paste(df$Subgroup, df$Classifier, sep = "-")
+  df$Subgroup2 <- factor(df$Subgroup2,
+                         levels = c("fbr-Eager",
+                                    "fbr-Lazy",
+                                    "raw-Lazy",
+                                    "dwt-Eager",
+                                    "dwt-Lazy",
+                                    "rld-Lazy",
+                                    "tsfresh-Eager",
+                                    "tsfresh-Lazy"),
+                         labels = c("FBR (eager)",
+                                    "FBR (lazy)",
+                                    "Raw (lazy)",
+                                    "DWT (eager)",
+                                    "DWT (lazy)",
+                                    "RLD (lazy)",
+                                    "tsfresh (eager)",
+                                    "tsfresh (lazy)"))
+  df$Time <- factor(df$Time, levels = c("Representation",
+                                        "Scaling",
+                                        "Selection",
+                                        "Training",
+                                        "Test"),
+                    labels = c("Representation",
+                               "Normalization",
+                               "Feature Selection",
+                               "Classifier Training",
+                               "Classifier Test"))
+  df$Value <- df$Value / 1000
+  return(df)
+}
+
+eval_group_subgroup <- function(all_configs,
+                                group_name = "d_config", subgroup_name = "s_config",
+                                group_label = "Dataset", subgroup_label = "Scaling", 
+                                value_fn, value_label, ylim, ybreaks,
+                                scale_fill, plot.margin,
+                                legend.position,
+                                legend.margin,
+                                legend.box.margin,
+                                legend.box.spacing,
+                                legend.key.height,
+                                subgroup_col = "name",
+                                group_col = "name",
+                                intermediate = "classify",
+                                dataset = "queryset",
+                                group_levels,
+                                subgroup_levels,
+                                group_labels = NULL,
+                                subgroup_labels = NULL,
+                                fn = NULL,
+                                width = NULL,
+                                height = NULL,
+                                w_feature = F,
+                                agg = F) {
+  
+  dt <- get_group_subgroup(all_configs,
+                           group_name,
+                           subgroup_name,
+                           value_fn,
+                           intermediate,
+                           dataset,
+                           group_col,
+                           subgroup_col,
+                           group_levels,
+                           subgroup_levels,
+                           group_labels,
+                           subgroup_labels)
   
   if (!is.null(fn)) {
     fp <- file.path("Plots", fn)
@@ -245,6 +308,86 @@ eval_barplot_group <- function(df,
     p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
                        position = position_dodge2(width = 0.9))
   }
+  p <- p 
+  
+  p <- p + eval_theme + theme(legend.position="none")
+  p <- p + scale_fill
+  p <- p + scale_y_continuous(breaks = ybreaks, lim = ylim)
+  p <- p + theme(legend.position = legend.position,
+                 plot.margin = plot.margin,
+                 legend.margin = legend.margin,
+                 legend.box.margin = legend.box.margin,
+                 legend.box.spacing = legend.box.spacing,
+                 legend.key.height = legend.key.height)
+  plot(p)
+}
+
+eval_runtime <- function(xlab,
+                         ylab,
+                         scale_fill,
+                         plot.margin,
+                         legend.position,
+                         legend.margin,
+                         legend.box.margin,
+                         legend.box.spacing,
+                         legend.key.height,
+                         width = NULL,
+                         height = NULL,
+                         fn = NULL) {
+  
+  get_runtime()
+  
+  
+  # df <- df[df$Subgroup %in% c("dwt", "fbc"),]
+  p <- ggplot(df, aes(x = Group, y = Value, fill = Time)) +
+    geom_bar(position = "stack", stat = "identity") +
+    facet_wrap( ~ Subgroup2, scales = "free_y", ncol = 4)
+  
+  p <- p + eval_theme + theme(legend.position="none")
+  p <- p + scale_fill
+  p <- p + xlab(xlab) + ylab(ylab)
+  #p <- p + scale_y_continuous(breaks = ybreaks, lim = ylim)
+  p <- p + theme(legend.position = legend.position,
+                 plot.margin = plot.margin,
+                 legend.margin = legend.margin,
+                 legend.box.margin = legend.box.margin,
+                 legend.box.spacing = legend.box.spacing,
+                 legend.key.height = legend.key.height)
+  
+  if (!is.null(fn)) {
+    fp <- file.path("Plots", fn)
+    pdf(fp, width = width, height = height, family = font_family)
+  }
+  
+  plot(p)
+  
+  
+  if (!is.null(fn)) {
+    dev.off()
+    embed_fonts(fp, options = "-dCompatibilityLevel=1.4")  
+  }
+  
+}
+
+eval_barplot_group <- function(df,
+                               xlab,
+                               ylab,
+                               ylim,
+                               ybreaks,
+                               scale_fill,
+                               plot.margin,
+                               legend.position,
+                               legend.margin,
+                               legend.box.margin,
+                               legend.box.spacing,
+                               legend.key.height,
+                               w_feature = F) {
+  p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
+  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
+  if (w_feature) {
+    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
+                       position = position_dodge2(width = 0.9))
+  }
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
@@ -256,6 +399,109 @@ eval_barplot_group <- function(df,
                  legend.box.spacing = legend.box.spacing,
                  legend.key.height = legend.key.height)
   plot(p)
+}
+
+eval_acc_vs_run <- function(scale_fill,
+                            plot.margin,
+                            legend.position,
+                            legend.margin,
+                            legend.box.margin,
+                            legend.box.spacing,
+                            legend.key.height,
+                            width,
+                            height,
+                            fn,
+                            group = "Metering",
+                            xlim = NULL) {
+  mnames <- list(list(mname = "dwt"), list(mname = "fbr"), list(mname = "tsfresh"))
+  cnames <- list(list(cname = "dt"), list(cname = "svm"), list(cname = "gbm"))
+  dt_eager <- get_group_subgroup(list(list(d[2:3], mnames, cnames)),
+                                 group_name = "d_config", subgroup_name = "mname",
+                                 value_fn = accuracy_agg,
+                                 intermediate = "classify",
+                                 dataset = "queryset",
+                                 group_col = "name",
+                                 subgroup_col = "mname",
+                                 group_levels = c("Metering", "Payment"),
+                                 subgroup_levels = c("dwt", "tsfresh", "fbr"),
+                                 group_labels = NULL,
+                                 subgroup_labels = NULL,
+                                 agg = T)
+  
+  mnames <- list(list(mname = "raw"),
+                 list(mname = "rld"),
+                 list(mname = "dwt"),
+                 list(mname = "fbr"),
+                 list(mname = "tsfresh"))
+  cnames <- list(list(cname = "knn"))
+  dt_lazy <- get_group_subgroup(list(list(d[2:3], mnames, cnames)),
+                                group_name = "d_config", subgroup_name = "mname",
+                                value_fn = accuracy_agg,
+                                intermediate = "classify",
+                                dataset = "queryset",
+                                group_col = "name", 
+                                subgroup_col = "mname",
+                                group_levels = c("Metering", "Payment"),
+                                subgroup_levels = c("raw", "rld", "dwt", "tsfresh", "fbr"),
+                                group_labels = NULL,
+                                subgroup_labels = NULL,
+                                agg = T)
+  
+  dt_eager$Classifier <- "Eager"
+  dt_lazy$Classifier <- "Lazy"
+  dt_acc <- rbind(dt_eager, dt_lazy)
+  dt_acc$Group <- as.character(dt_acc$Group)
+  dt_acc$Subgroup <- as.character(dt_acc$Subgroup)
+  dt_runtime <- as.data.table(get_runtime())
+  
+  dt_runtime_sum <- dt_runtime[, sum(Value), by = c("Group", "Subgroup", "Classifier")]
+  colnames(dt_runtime_sum)[4] <- "Runtime"
+  dt <- merge(dt_acc, dt_runtime_sum, by = c("Group", "Subgroup", "Classifier"), all = T)
+  dt$Subgroup2 <- paste(dt$Subgroup, dt$Classifier, sep = "-")
+  dt$Subgroup2 <- factor(dt$Subgroup2,
+                         levels = c("fbr-Eager",
+                                    "fbr-Lazy",
+                                    "raw-Lazy",
+                                    "dwt-Eager",
+                                    "dwt-Lazy",
+                                    "rld-Lazy",
+                                    "tsfresh-Eager",
+                                    "tsfresh-Lazy"),
+                         labels = c("FBR (eager)",
+                                    "FBR (lazy)",
+                                    "Raw",
+                                    "DWT (eager)",
+                                    "DWT (lazy)",
+                                    "RLD",
+                                    "tsfresh (eager)",
+                                    "tsfresh (lazy)"))
+  
+  if (!is.null(fn)) {
+    fp <- file.path("Plots", fn)
+    pdf(fp, width = width, height = height, family = font_family)
+  }
+  
+  p <- ggplot(dt[Group == group], aes(x = Value, y = Runtime, color = Subgroup, label = Subgroup2))
+  p <- p + scale_y_log10()
+  p <- p + geom_label_repel(size = 2.5, show.legend = F)
+  p <- p + geom_point(shape=4) + scale_fill
+  p <- p + xlab("Accuracy (%)") + ylab("Runtime (s)")
+  p <- p + eval_theme + theme(legend.position="none")
+  p <- p + xlim(xlim)
+  p <- p + theme(legend.position = legend.position,
+                 plot.margin = plot.margin,
+                 legend.margin = legend.margin,
+                 legend.box.margin = legend.box.margin,
+                 legend.box.spacing = legend.box.spacing,
+                 legend.key.height = legend.key.height)
+  
+  print(p)
+  
+  if (!is.null(fn)) {
+    dev.off()
+    embed_fonts(fp, options = "-dCompatibilityLevel=1.4")  
+  }
+  
 }
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -308,5 +554,7 @@ eval_theme <- theme(
   axis.line = element_line(colour = "black", size = 0.0),
   panel.border = element_rect(color = "black", fill=NA, size=0.3),
   # top, right, bottom, left
-  plot.margin = unit(c(1, 2, 1, 1.7), "mm")
+  plot.margin = unit(c(1, 2, 1, 1.7), "mm"),
+  plot.background = element_rect(color = "white", fill= "white"),
+  strip.background = element_rect(color = "white", fill= "white")
 )

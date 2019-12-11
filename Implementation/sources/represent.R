@@ -30,10 +30,13 @@ represent <- function(dataset, method, parallel) {
     duration_dec <- tictoc::toc(start)
     
     # Reduction
-    start <- tictoc::tic()
+    
     if (mgr_is_vectorized(method)) {
+      start <- tictoc::tic()
       repr <- classrepr::mgr_red(method, dsl)
-    } else {
+      duration_red <- tictoc::toc(start)
+    } else if (class(method) == "rld") {
+      start <- tictoc::tic()
       fs <- classrepr::mgr_red(method, dsl[[1]])
       repr <- matrix(NA, nrow = nrow(dataset), ncol = length(fs))
       colnames(repr) <- names(fs)
@@ -46,8 +49,12 @@ represent <- function(dataset, method, parallel) {
         }
         repr[i, ] <- c(row, rep(NA, ncol(repr) - length(row)))
       }
+      duration_red <- tictoc::toc(start)
+    } else {
+      start <- tictoc::tic()
+      repr <- t(sapply(dsl, classrepr::mgr_red, method = method))
+      duration_red <- tictoc::toc(start)
     }
-    duration_red <- tictoc::toc(start)
     
     print(paste("Duration for Decomposition:", duration_dec))
     print(paste("Duration for Reduction:", duration_red))
