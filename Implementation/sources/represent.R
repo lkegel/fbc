@@ -36,6 +36,7 @@ represent <- function(dataset, method, parallel) {
       repr <- classrepr::mgr_red(method, dsl)
       duration_red <- tictoc::toc(start)
     } else if (class(method) == "rld") {
+      print(microbenchmark::microbenchmark(classrepr::mgr_red(method, dsl[[1]])))
       start <- tictoc::tic()
       fs <- classrepr::mgr_red(method, dsl[[1]])
       repr <- matrix(NA, nrow = nrow(dataset), ncol = length(fs))
@@ -51,6 +52,7 @@ represent <- function(dataset, method, parallel) {
       }
       duration_red <- tictoc::toc(start)
     } else {
+      print(microbenchmark::microbenchmark(classrepr::mgr_red(method, dsl[[1]])))
       start <- tictoc::tic()
       repr <- t(sapply(dsl, classrepr::mgr_red, method = method))
       duration_red <- tictoc::toc(start)
