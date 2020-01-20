@@ -52,7 +52,7 @@ represent <- function(dataset, method, parallel) {
       }
       duration_red <- tictoc::toc(start)
     } else {
-      print(microbenchmark::microbenchmark(classrepr::mgr_red(method, dsl[[1]])))
+      
       start <- tictoc::tic()
       repr <- t(sapply(dsl, classrepr::mgr_red, method = method))
       duration_red <- tictoc::toc(start)

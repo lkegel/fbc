@@ -135,13 +135,13 @@ eval_group_subgroup_agg(d[2:3], mnames, cnames,
 
 # Eval eager per d and r
 mnames <- list(list(mname = "fbr"), list(mname = "tsfresh"), list(mname = "dwt"))
-cnames <- list(list(cname = "gbm"))#, list(cname = "svm"), list(cname = "gbm"))
+cnames <- list(list(cname = "gbm"), list(cname = "svm"), list(cname = "gbm"))
 eval_group_subgroup(list(list(d[2:3], mnames, cnames)),
                     group_name = "d_config", subgroup_name = "mname",
                     group_label = "Dataset", subgroup_label = "Method",
                     value_fn = accuracy_agg, value_label = "Accuracy (%)",
                     ylim = c(0, 110), ybreaks = seq(0, 100, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:3]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(4, 3, 1)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -156,7 +156,7 @@ eval_group_subgroup(list(list(d[2:3], mnames, cnames)),
                     subgroup_levels = c("dwt", "tsfresh", "fbr"),
                     group_labels = NULL,
                     subgroup_labels = c("DWT", "tsfresh", "FBR"),
-                    fn = NULL, #"acc_eager.pdf",
+                    fn = "acc_eager.pdf",
                     width = widths_in[2],
                     height = heights_in[2],
                     w_feature = T,
@@ -172,9 +172,9 @@ cnames <- list(list(cname = "knn"))
 eval_group_subgroup(list(list(d[2:3], mnames, cnames)),
                     group_name = "d_config", subgroup_name = "mname",
                     group_label = "Dataset", subgroup_label = "Method",
-                    value_fn = accuracy_agg, value_label = "Accuracy (%)",
+                    value_fn = accuracy_agg, value_label = NULL,
                     ylim = c(0, 110), ybreaks = seq(0, 100, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 5, 4, 3, 1)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -222,16 +222,17 @@ eval_group_subgroup(list(list(d[2:3], m[c("13", "14", "15")],  s["1"], f["1"], c
                     subgroup_labels = c("Strength", "Reconstructible", "Both"),
                     fn = "fbr_method.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
+                    height = heights_in_2_alter,
                     w_feature = T)
+
 
 # - Scale -> Dataset (svm, no select) ------------------------------------------
 eval_group_subgroup(list(list(d[2:3], m["14"], s[c("1", "2", "3", "5")], f["1"], c["20"])),
                     group_name = "d_config", subgroup_name = "s_config",
                     group_label = NULL, subgroup_label = "Scale",
-                    value_fn = accuracy, value_label = NULL,
-                    ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    value_fn = accuracy, value_label = "Accuracy (%)",
+                    ylim = c(0, 101), ybreaks = seq(0, 100, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -245,18 +246,19 @@ eval_group_subgroup(list(list(d[2:3], m["14"], s[c("1", "2", "3", "5")], f["1"],
                     group_levels = c("Metering", "Payment"),
                     subgroup_levels = c("No Scaling", "01 Scaling with Outlier", "01 Scaling", "Z Scaling"),
                     group_labels = NULL,
-                    subgroup_labels = c("No", "01 with Outlier", "01", "Z"),
+                    subgroup_labels = c("No", "0-1 with Outlier", "0-1", "Z"),
                     fn = "fbr_norm_svm.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = F)
+                    height = heights_in_2_alter,
+                    w_feature = F,
+                    agg = F)
 
 eval_group_subgroup(list(list(d[2:3], m["14"], s[c("1", "2", "3", "5")], f["1"], c["41"])),
                     group_name = "d_config", subgroup_name = "s_config",
                     group_label = NULL, subgroup_label = "Scale",
-                    value_fn = accuracy, value_label = "Accuracy (%)",
-                    ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    value_fn = accuracy, value_label = NULL,
+                    ylim = c(0, 101), ybreaks = seq(0, 100, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -270,18 +272,45 @@ eval_group_subgroup(list(list(d[2:3], m["14"], s[c("1", "2", "3", "5")], f["1"],
                     group_levels = c("Metering", "Payment"),
                     subgroup_levels = c("No Scaling", "01 Scaling with Outlier", "01 Scaling", "Z Scaling"),
                     group_labels = NULL,
-                    subgroup_labels = c("No", "01 with Outlier", "01", "Z"),
+                    subgroup_labels = c("No", "0-1 with Outlier", "0-1", "Z"),
                     fn = "fbr_norm_knn.pdf",
                     width = widths_in[2],
-                    height = heights_in[2])
+                    height = heights_in_2_alter,
+                    agg = F)
 
 # - Selection -> Dataset (dt, no scaling) --------------------------------------
 eval_group_subgroup(list(list(d[2:3], m["14"], s["5"], f[c("1", "1399", "8000")], c["20"])),
                     group_name = "d_config", subgroup_name = "f_config",
                     group_label = NULL, subgroup_label = "Selection",
+                    value_fn = accuracy, value_label = "Accuracy (%)",
+                    ylim = c(0, 110), ybreaks = seq(0, 120, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3)]),
+                    plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
+                    legend.position = c(0, 1.01),
+                    legend.margin = margin(0, 0, 0, 0, "mm"),
+                    legend.box.margin = margin(1, 1, 1, 1, "mm"),
+                    legend.box.spacing = unit(0, "mm"),
+                    legend.key.height = unit(2, "mm"),
+                    subgroup_col = "name",
+                    group_col = "name",
+                    intermediate = "validate",
+                    dataset = "dataset",
+                    group_levels = c("Metering", "Payment"),
+                    subgroup_levels = c("no", "fbr", "tsfresh"),
+                    group_labels = NULL,
+                    subgroup_labels = c("No", "CFS", "tsfresh"),
+                    fn = "fbr_fs_svm.pdf",
+                    width = widths_in[2],
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F)
+
+eval_group_subgroup(list(list(d[2:3], m["14"], s["5"], f[c("1", "1399", "8000")], c["41"])),
+                    group_name = "d_config", subgroup_name = "f_config",
+                    group_label = NULL, subgroup_label = "Selection",
                     value_fn = accuracy, value_label = NULL,
                     ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -298,8 +327,9 @@ eval_group_subgroup(list(list(d[2:3], m["14"], s["5"], f[c("1", "1399", "8000")]
                     subgroup_labels = c("No", "CFS", "tsfresh"),
                     fn = "fbr_fs_knn.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T)
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F)
 
 # - Classifier -> Dataset (dt, no scaling) -------------------------------------
 eval_group_subgroup(list(list(d, m["14"], s["1"], f["1"], c["10"]),
@@ -332,8 +362,8 @@ eval_group_subgroup(list(list(d[2:3], m["80"], s[c("1", "2", "3", "5")], f["1"],
                     group_name = "d_config", subgroup_name = "s_config",
                     group_label = NULL, subgroup_label = "Scale",
                     value_fn = accuracy, value_label = "Accuracy (%)",
-                    ylim = c(0, 100), ybreaks = seq(0, 100, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    ylim = c(0, 101), ybreaks = seq(0, 100, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -347,19 +377,20 @@ eval_group_subgroup(list(list(d[2:3], m["80"], s[c("1", "2", "3", "5")], f["1"],
                     group_levels = c("Metering", "Payment"),
                     subgroup_levels = c("No Scaling", "01 Scaling with Outlier", "01 Scaling", "Z Scaling"),
                     group_labels = NULL,
-                    subgroup_labels = c("No", "01 with Outlier", "01", "Z"),
+                    subgroup_labels = c("No", "0-1 with Outlier", "0-1", "Z"),
                     fn = "tsfresh_norm_svm.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = F)
+                    height = heights_in_2_alter,
+                    w_feature = F,
+                    agg = F)
 
 # - Scale -> Dataset (knn, no select) ------------------------------------------
 eval_group_subgroup(list(list(d[2:3], m["80"], s[c("1", "2", "3", "5")], f["1"], c["41"])),
                     group_name = "d_config", subgroup_name = "s_config",
                     group_label = NULL, subgroup_label = "Scale",
-                    value_fn = accuracy, value_label = "Accuracy (%)",
-                    ylim = c(0, 100), ybreaks = seq(0, 100, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    value_fn = accuracy, value_label = NULL,
+                    ylim = c(0, 101), ybreaks = seq(0, 100, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -373,21 +404,20 @@ eval_group_subgroup(list(list(d[2:3], m["80"], s[c("1", "2", "3", "5")], f["1"],
                     group_levels = c("Metering", "Payment"),
                     subgroup_levels = c("No Scaling", "01 Scaling with Outlier", "01 Scaling", "Z Scaling"),
                     group_labels = NULL,
-                    subgroup_labels = c("No", "01 with Outlier", "01", "Z"),
+                    subgroup_labels = c("No", "0-1 with Outlier", "0-1", "Z"),
                     fn = "tsfresh_norm_knn.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
+                    height = heights_in_2_alter,
                     w_feature = F)
 
 # - Selection -> Dataset (dt/gbm, no scaling) ----------------------------------
-c("30", as.character(seq(3001, 3030)))])
 eval_group_subgroup(list(list(d[2:3], m["80"], s["1"], f[c("1", "1399", "8000")],
                               c["10"])),
                     group_name = "d_config", subgroup_name = "f_config",
                     group_label = NULL, subgroup_label = "Selection",
-                    value_fn = accuracy, value_label = "Accuracy",
+                    value_fn = accuracy, value_label = "Accuracy (%)",
                     ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -402,18 +432,19 @@ eval_group_subgroup(list(list(d[2:3], m["80"], s["1"], f[c("1", "1399", "8000")]
                     subgroup_levels = c("no", "fbr", "tsfresh"),
                     group_labels = NULL,
                     subgroup_labels = c("No", "CFS", "tsfresh"),
-                    fn = NULL, #"tsfresh_fs_svm.pdf",
+                    fn = "tsfresh_fs_dt.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T)
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F)
 
 # - Selection -> Dataset (svm, no scaling) --------------------------------------
-eval_group_subgroup(list(list(d, m["80"], s["5"], f[c("1", "1399", "8000")], c["21"])),
+eval_group_subgroup(list(list(d[2:3], m["80"], s["5"], f[c("1", "1399", "8000")], c["21"])),
                     group_name = "d_config", subgroup_name = "f_config",
                     group_label = NULL, subgroup_label = "Selection",
-                    value_fn = accuracy, value_label = "Accuracy",
+                    value_fn = accuracy, value_label = "Accuracy (%)",
                     ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -430,16 +461,17 @@ eval_group_subgroup(list(list(d, m["80"], s["5"], f[c("1", "1399", "8000")], c["
                     subgroup_labels = c("No", "CFS", "tsfresh"),
                     fn = "tsfresh_fs_svm.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T)
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F)
 
 # - Selection -> Dataset (knn, no scaling) --------------------------------------
-eval_group_subgroup(list(list(d, m["80"], s["5"], f[c("1", "1399", "8000")], c["41"])),
+eval_group_subgroup(list(list(d[2:3], m["80"], s["5"], f[c("1", "1399", "8000")], c["41"])),
                     group_name = "d_config", subgroup_name = "f_config",
                     group_label = NULL, subgroup_label = "Selection",
-                    value_fn = accuracy, value_label = "Accuracy",
+                    value_fn = accuracy, value_label = NULL,
                     ylim = c(0, 110), ybreaks = seq(0, 120, 20),
-                    scale_fill = scale_fill_manual(values = eval_color[1:5]),
+                    scale_fill = scale_fill_manual(values = eval_color[c(2, 1, 3, 4)]),
                     plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                     legend.position = c(0, 1.01),
                     legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -456,8 +488,9 @@ eval_group_subgroup(list(list(d, m["80"], s["5"], f[c("1", "1399", "8000")], c["
                     subgroup_labels = c("No", "CFS", "tsfresh"),
                     fn = "tsfresh_fs_knn.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T)
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F)
 
 # - Classifier -> Dataset (dt, no scaling) -------------------------------------
 eval_group_subgroup(list(list(d, m["80"], s["1"], f["1"], c["10"]),
@@ -510,8 +543,8 @@ eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("1", "3016")], c["20"
                     subgroup_labels = c("Best 2", "Best 4", "Best 8", "Best 16"),
                     fn = NULL, #"dwt_fs_svm.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T
+                    height = heights_in_2_alter,
+                    w_feature = T,
 )
 
 # - Selection -> Dataset (svm, no scaling) --------------------------------------
@@ -537,12 +570,41 @@ eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("3002", "3004", "3008
                     subgroup_labels = c("Best 2", "Best 4", "Best 8", "Best 16"),
                     fn = "dwt_fs_svm.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F
 )
 
 # - Selection -> Dataset (knn, no scaling) --------------------------------------
 eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("3002", "3004", "3008", "3016")], c["41"])),
+                    group_name = "d_config", subgroup_name = "f_config",
+                    group_label = NULL, subgroup_label = "Selection",
+                    value_fn = accuracy, value_label = NULL,
+                    ylim = c(0, 110), ybreaks = seq(0, 120, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[1:6]),
+                    plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
+                    legend.position = c(0, 1.01),
+                    legend.margin = margin(0, 0, 0, 0, "mm"),
+                    legend.box.margin = margin(1, 1, 1, 1, "mm"),
+                    legend.box.spacing = unit(0, "mm"),
+                    legend.key.height = unit(2, "mm"),
+                    subgroup_col = "fid",
+                    group_col = "name",
+                    intermediate = "validate",
+                    dataset = "dataset",
+                    group_levels = c("Metering", "Payment"),
+                    subgroup_levels = c(3002, 3004, 3008, 3016),
+                    group_labels = NULL,
+                    subgroup_labels = c("Best 2", "Best 4", "Best 8", "Best 16"),
+                    fn = "dwt_fs_knn.pdf",
+                    width = widths_in[2],
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F
+                    )
+
+# - Selection -> Dataset (dt, no scaling) --------------------------------------
+eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("3002", "3004", "3008", "3016")], c["10"])),
                     group_name = "d_config", subgroup_name = "f_config",
                     group_label = NULL, subgroup_label = "Selection",
                     value_fn = accuracy, value_label = "Accuracy (%)",
@@ -562,11 +624,42 @@ eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("3002", "3004", "3008
                     subgroup_levels = c(3002, 3004, 3008, 3016),
                     group_labels = NULL,
                     subgroup_labels = c("Best 2", "Best 4", "Best 8", "Best 16"),
-                    fn = "dwt_fs_knn.pdf",
+                    fn = "dwt_fs_dt.pdf",
                     width = widths_in[2],
-                    height = heights_in[2],
-                    w_feature = T
-                    )
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F
+)
+
+
+# - Selection -> Dataset (gbm, no scaling) --------------------------------------
+eval_group_subgroup(list(list(d[2:3], m["30"], s["4"], f[c("3002", "3004", "3008", "3016")], c[c("30", as.character(seq(3001, 3030)))])),
+                    group_name = "d_config", subgroup_name = "f_config",
+                    group_label = NULL, subgroup_label = "Selection",
+                    value_fn = accuracy, value_label = NULL,
+                    ylim = c(0, 110), ybreaks = seq(0, 120, 20),
+                    scale_fill = scale_fill_manual(values = eval_color[1:6]),
+                    plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
+                    legend.position = c(0, 1.01),
+                    legend.margin = margin(0, 0, 0, 0, "mm"),
+                    legend.box.margin = margin(1, 1, 1, 1, "mm"),
+                    legend.box.spacing = unit(0, "mm"),
+                    legend.key.height = unit(2, "mm"),
+                    subgroup_col = "fid",
+                    group_col = "name",
+                    intermediate = "validate",
+                    dataset = "dataset",
+                    group_levels = c("Metering", "Payment"),
+                    subgroup_levels = c(3002, 3004, 3008, 3016),
+                    group_labels = NULL,
+                    subgroup_labels = c("Best 2", "Best 4", "Best 8", "Best 16"),
+                    fn = "dwt_fs_gbm.pdf",
+                    width = widths_in[2],
+                    height = heights_in_2_alter,
+                    w_feature = T,
+                    agg = F
+)
+
 
 
 # - Classifier -> Dataset (dt, no scaling) -------------------------------------
@@ -612,7 +705,7 @@ eval_runtime(xlab = NULL, ylab = "Runtime (s)",
 # +++++++++++ ------------------------------------------------------------------
 # Runtime vs. Accuracy ---------------------------------------------------------
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-eval_acc_vs_run(scale_fill = scale_fill_manual(values = eval_color[1:5]),
+eval_acc_vs_run(scale_color = scale_color_manual(values = eval_color[c(4,1,2,5,3)]),
                 plot.margin = unit(c(5, 2, 1, 1.7), "mm"),
                 legend.position = c(0, 1.015),
                 legend.margin = margin(0, 0, 0, 0, "mm"),
@@ -621,9 +714,12 @@ eval_acc_vs_run(scale_fill = scale_fill_manual(values = eval_color[1:5]),
                 legend.key.height = unit(2, "mm"),
                 width = widths_in[2],
                 height = heights_in[2],
-                fn = "acc_vs_run_payment.pdf",
-                group = "Payment",
-                xlim = c(50, 110))
+                fn = "acc_vs_run_metering.pdf",
+                group = "Metering",
+                # xlim = c(30, 130),
+                # ylimits = c(5, 20000))
+                xlim = c(30, 130),
+                ylimits = c(100, 200000))
 
 
 plot(dt[Group == "Metering"]$Value, log(dt[Group == "Metering"]$Runtime))

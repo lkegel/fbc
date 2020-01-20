@@ -1,4 +1,5 @@
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(ggrepel))
 suppressPackageStartupMessages(library(directlabels))
 suppressPackageStartupMessages(library(latticeExtra))
 suppressPackageStartupMessages(library(grDevices))
@@ -56,6 +57,97 @@ eval_accuracy <- function(d_configs, m_configs, s_configs, f_configs, c_configs)
       }
     }
   }
+}
+
+eval_scale_heatmap <- function(d_config, m_config, s_config) {
+  d_config <- d[[1]]
+  m_config <- m$`14`
+  s_config <- s$`2`
+  ygroup_map <- c(sd = "stochastic",
+                  skew = "stochastic",
+                  kurt = "stochastic",
+                  acf1 = "stochastic",
+                  theta = "trend",
+                  season_1 = "season 1",
+                  season_2 = "season 2",
+                  season_3 = "season 3")
+  
+  ygroup_fn <- function(feature) {
+    unname(ygroup_map[which(sapply(names(ygroup_map), function(x, y) { return(length(grep(x, y)) > 0) }, y = feature, USE.NAMES = F))])
+  }
+  ygroup_fn_v <- Vectorize(ygroup_fn, USE.NAMES = F)
+
+  fp <- util_get_filepath(d_config, "dataset", ext = "csv")
+  y <- read.table(fp, header = T, sep = ";")[, "Code"]  
+
+  idx <- c(seq(50), min(which(y == 2)) + seq(0, 49), min(which(y == 3)) + seq(0, 49))
+  
+  d_config <- d[["1"]]
+  m_config <- m[["14"]]
+  s_config <- s[["2"]]
+  f_config <- f[["1399"]]
+  scaled_data <- intermediate_read(d_config, "scaled-dataset", m_config, s_config)
+  
+  # With selection
+  selection <- intermediate_read(d_config, "feature-selection", m_config, s_config, f_config)
+  I <- nrow(scaled_data)
+  # scaled_data <- scaled_data[idx, ]
+  scaled_data <- scaled_data[idx, selection]
+  y <- y[idx]
+  I <- nrow(scaled_data)
+  K <- ncol(scaled_data)
+  df <- data.frame(Feature = rep(colnames(scaled_data), each = I))
+  df$TimeSeries <- rep(seq(I), K)
+  df$Value <- as.vector(scaled_data)
+  df$Ygroup <- ygroup_fn_v(df$Feature)
+  df$Xgroup <- as.character(y)
+  
+  dim_x <- "TimeSeries"
+  dim_y <- "Feature"
+  lab_x <- "Time Series"
+  lab_y <- "Feature"
+  name_val <- "Value"
+  limits <- c(0, 1)
+  midpoint <- 0
+  axis.text.y <- F
+  # fn <- "heatmap_metering3.pdf"
+  fn <- "heatmap_metering3_select.pdf"
+  width <- widths_in[2]
+  height <- heights_in[2]
+  
+}
+
+eval_heatmap <- function(df, dim_x, dim_y, lab_x, lab_y, name_val, limits, midpoint, axis.text.y = T, fn) {
+  x_breaks <- seq(min(df[[dim_x]]), max(df[[dim_x]]), length.out = 10)
+  p <- ggplot(data = df, aes(x = get(dim_x), y = get(dim_y), fill = get(name_val)))
+  p <- p + geom_tile()
+  #p <- p + scale_fill_gradient2(space ="Lab", low = (colour = "#d7191c"), high = (colour = "#2b83ba"), limits = limits, midpoint = midpoint)
+  p <- p + scale_fill_gradientn(colours = eval_color)
+  p <- p + xlab(lab_x) + ylab(lab_y)
+  
+  #p <- p + scale_x_continuous(breaks = x_breaks)
+  p <- p + scale_y_discrete(breaks = x_breaks)
+  p <- p + eval_theme + theme(legend.position="none")
+  p <- p + theme(axis.text.x = element_blank())
+  # p <- p + facet_grid(Xgroup ~ Ygroup, scales = "free") #scales = "free_y", dir = "v") #, space = "free_y"
+  # p <- p + facet_wrap( . ~Xgroup, scales = "free_x") #, space = "free_y"
+  if (!axis.text.y) {
+    p <- p + theme(axis.text.y = element_blank())
+  }
+  
+  if (!is.null(fn)) {
+    fp <- file.path("Plots", fn)
+    cairo_pdf(fp, width = width, height = height)
+  }
+  
+  plot(p)
+  
+  
+  if (!is.null(fn)) {
+    dev.off()
+    embed_fonts(fp, options = "-dCompatibilityLevel=1.4")  
+  }
+  
 }
 
 acc <- function(y, pred) {
@@ -196,19 +288,19 @@ get_runtime <- function() {
   df <- openxlsx::read.xlsx("Evaluation/Eval.xlsx", "RuntimeDF")
   df$Subgroup2 <- paste(df$Subgroup, df$Classifier, sep = "-")
   df$Subgroup2 <- factor(df$Subgroup2,
-                         levels = c("fbr-Eager",
+                         levels = c("dwt-Eager",
+                                    "dwt-Lazy",
+                                    "fbr-Eager",
                                     "fbr-Lazy",
                                     "raw-Lazy",
-                                    "dwt-Eager",
-                                    "dwt-Lazy",
                                     "rld-Lazy",
                                     "tsfresh-Eager",
                                     "tsfresh-Lazy"),
-                         labels = c("FBR (eager)",
+                         labels = c("DWT (eager)",
+                                    "DWT (lazy)",
+                                    "FBR (eager)",
                                     "FBR (lazy)",
                                     "Raw (lazy)",
-                                    "DWT (eager)",
-                                    "DWT (lazy)",
                                     "RLD (lazy)",
                                     "tsfresh (eager)",
                                     "tsfresh (lazy)"))
@@ -217,11 +309,11 @@ get_runtime <- function() {
                                         "Selection",
                                         "Training",
                                         "Test"),
-                    labels = c("Representation",
-                               "Normalization",
-                               "Feature Selection",
-                               "Classifier Training",
-                               "Classifier Test"))
+                    labels = c(" Representation   ",
+                               " Normalization   ",
+                               " Feature Selection   ",
+                               " Classifier Estimation   ",
+                               " Classifier Use"))
   df$Value <- df$Value / 1000
   return(df)
 }
@@ -261,11 +353,12 @@ eval_group_subgroup <- function(all_configs,
                            group_levels,
                            subgroup_levels,
                            group_labels,
-                           subgroup_labels)
+                           subgroup_labels,
+                           agg)
   
   if (!is.null(fn)) {
     fp <- file.path("Plots", fn)
-    pdf(fp, width = width, height = height, family = font_family)
+    cairo_pdf(fp, width = width, height = height)
   }
   
   # names(dt) <- c(group_label, subgroup_label, value_label)          
@@ -304,11 +397,6 @@ eval_barplot_group <- function(df,
                                w_feature = F) {
   p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
   p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
-  if (w_feature) {
-    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
-                       position = position_dodge2(width = 0.9))
-  }
-  p <- p 
   
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
@@ -319,6 +407,11 @@ eval_barplot_group <- function(df,
                  legend.box.margin = legend.box.margin,
                  legend.box.spacing = legend.box.spacing,
                  legend.key.height = legend.key.height)
+  
+  if (w_feature) {
+    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
+                       position = position_dodge2(width = 0.9), family = font_family) 
+  }
   plot(p)
 }
 
@@ -335,7 +428,7 @@ eval_runtime <- function(xlab,
                          height = NULL,
                          fn = NULL) {
   
-  get_runtime()
+  df <- get_runtime()
   
   
   # df <- df[df$Subgroup %in% c("dwt", "fbc"),]
@@ -356,7 +449,7 @@ eval_runtime <- function(xlab,
   
   if (!is.null(fn)) {
     fp <- file.path("Plots", fn)
-    pdf(fp, width = width, height = height, family = font_family)
+    cairo_pdf(fp, width = width, height = height)
   }
   
   plot(p)
@@ -384,10 +477,7 @@ eval_barplot_group <- function(df,
                                w_feature = F) {
   p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
   p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
-  if (w_feature) {
-    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
-                       position = position_dodge2(width = 0.9))
-  }
+ 
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
@@ -398,10 +488,14 @@ eval_barplot_group <- function(df,
                  legend.box.margin = legend.box.margin,
                  legend.box.spacing = legend.box.spacing,
                  legend.key.height = legend.key.height)
+  if (w_feature) {
+    p <- p + geom_text(aes(y = 100, label = Feature), vjust = -0.3, size = 3,
+                       position = position_dodge2(width = 0.9), family = font_family)
+  }
   plot(p)
 }
 
-eval_acc_vs_run <- function(scale_fill,
+eval_acc_vs_run <- function(scale_color,
                             plot.margin,
                             legend.position,
                             legend.margin,
@@ -412,7 +506,8 @@ eval_acc_vs_run <- function(scale_fill,
                             height,
                             fn,
                             group = "Metering",
-                            xlim = NULL) {
+                            xlim = NULL,
+                            ylimits) {
   mnames <- list(list(mname = "dwt"), list(mname = "fbr"), list(mname = "tsfresh"))
   cnames <- list(list(cname = "dt"), list(cname = "svm"), list(cname = "gbm"))
   dt_eager <- get_group_subgroup(list(list(d[2:3], mnames, cnames)),
@@ -459,32 +554,31 @@ eval_acc_vs_run <- function(scale_fill,
   dt <- merge(dt_acc, dt_runtime_sum, by = c("Group", "Subgroup", "Classifier"), all = T)
   dt$Subgroup2 <- paste(dt$Subgroup, dt$Classifier, sep = "-")
   dt$Subgroup2 <- factor(dt$Subgroup2,
-                         levels = c("fbr-Eager",
+                         levels = c("dwt-Eager",
+                                    "dwt-Lazy",
+                                    "fbr-Eager",
                                     "fbr-Lazy",
                                     "raw-Lazy",
-                                    "dwt-Eager",
-                                    "dwt-Lazy",
                                     "rld-Lazy",
                                     "tsfresh-Eager",
                                     "tsfresh-Lazy"),
-                         labels = c("FBR (eager)",
+                         labels = c("DWT (eager)",
+                                    "DWT (lazy)",
+                                    "FBR (eager)",
                                     "FBR (lazy)",
                                     "Raw",
-                                    "DWT (eager)",
-                                    "DWT (lazy)",
                                     "RLD",
                                     "tsfresh (eager)",
                                     "tsfresh (lazy)"))
   
   if (!is.null(fn)) {
     fp <- file.path("Plots", fn)
-    pdf(fp, width = width, height = height, family = font_family)
+    cairo_pdf(fp, width = width, height = height)
   }
   
   p <- ggplot(dt[Group == group], aes(x = Value, y = Runtime, color = Subgroup, label = Subgroup2))
-  p <- p + scale_y_log10()
-  p <- p + geom_label_repel(size = 2.5, show.legend = F)
-  p <- p + geom_point(shape=4) + scale_fill
+  p <- p + scale_y_log10(limits = ylimits)
+  p <- p + geom_point(shape=4) + scale_color
   p <- p + xlab("Accuracy (%)") + ylab("Runtime (s)")
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + xlim(xlim)
@@ -494,6 +588,7 @@ eval_acc_vs_run <- function(scale_fill,
                  legend.box.margin = legend.box.margin,
                  legend.box.spacing = legend.box.spacing,
                  legend.key.height = legend.key.height)
+  p <- p + geom_label_repel(size = 2.5, show.legend = F, family = font_family)
   
   print(p)
   
@@ -509,7 +604,7 @@ eval_acc_vs_run <- function(scale_fill,
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 widths_in <- c(15, 7.5, 5) / 2.54
 heights_in <- c(9.27, 4.63, 3.09) / 2.54
-
+heights_in_2_alter <- 4 / 2.54
 width_in_2 <- 1.48
 height_in_2 <- 1.04
 height_in_2_heat <- 1.31
@@ -522,6 +617,7 @@ if ("Linux Libertine" %in% fonts()) {
 } else {
   font_family <- "sans"
 }
+font_family <- "Palatino Linotype"
 
 # run once font_import()
 # run once loadfonts() and make sure Linux Libertine is loaded
