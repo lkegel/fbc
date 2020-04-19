@@ -396,8 +396,8 @@ eval_barplot_group <- function(df,
                                legend.key.height,
                                w_feature = F) {
   p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
-  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
-  
+  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"),
+                    color = "black", size = 0.1)
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
   p <- p + scale_y_continuous(breaks = ybreaks, lim = ylim)
@@ -418,6 +418,7 @@ eval_barplot_group <- function(df,
 eval_runtime <- function(xlab,
                          ylab,
                          scale_fill,
+                         scale_linetype,
                          plot.margin,
                          legend.position,
                          legend.margin,
@@ -432,20 +433,25 @@ eval_runtime <- function(xlab,
   
   
   # df <- df[df$Subgroup %in% c("dwt", "fbc"),]
-  p <- ggplot(df, aes(x = Group, y = Value, fill = Time)) +
-    geom_bar(position = "stack", stat = "identity") +
+  p <- ggplot(df, aes(x = Group, y = Value, fill = Time, linetype = Time)) +
+    geom_bar(position = "stack", stat = "identity", color = "black", size = 0.1) +
     facet_wrap( ~ Subgroup2, scales = "free_y", ncol = 4)
   
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + scale_fill
+  p <- p + scale_linetype
   p <- p + xlab(xlab) + ylab(ylab)
   #p <- p + scale_y_continuous(breaks = ybreaks, lim = ylim)
+  p <- p + scale_y_continuous(#breaks = sort(unique(df[[x_dim]])), lim = c(NA, xlim_max),
+                     labels = function(x) format(x, big.mark = ",", scientific = FALSE))
   p <- p + theme(legend.position = legend.position,
                  plot.margin = plot.margin,
                  legend.margin = legend.margin,
                  legend.box.margin = legend.box.margin,
                  legend.box.spacing = legend.box.spacing,
-                 legend.key.height = legend.key.height)
+                 legend.key.height = legend.key.height,
+                 strip.background = element_rect(colour=NA, fill=NA)
+                 )
   
   if (!is.null(fn)) {
     fp <- file.path("Plots", fn)
@@ -476,7 +482,8 @@ eval_barplot_group <- function(df,
                                legend.key.height,
                                w_feature = F) {
   p <- ggplot(df, aes(Group, fill = Subgroup, y = Value))
-  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"))
+  p <- p + geom_col(position = position_dodge2(width = 1, preserve = "total"),
+                    color = "black", size = 0.1)
  
   p <- p + xlab(xlab) + ylab(ylab)
   p <- p + eval_theme + theme(legend.position="none")
@@ -577,17 +584,18 @@ eval_acc_vs_run <- function(scale_color,
   }
   
   p <- ggplot(dt[Group == group], aes(x = Value, y = Runtime, color = Subgroup, label = Subgroup2))
-  p <- p + scale_y_log10(limits = ylimits)
+  p <- p + scale_y_log10(limits = ylimits,
+                         labels = function(x) format(x, big.mark = ",", scientific = FALSE))
   p <- p + geom_point(shape=4) + scale_color
   p <- p + xlab("Accuracy (%)") + ylab("Runtime (s)")
   p <- p + eval_theme + theme(legend.position="none")
   p <- p + xlim(xlim)
-  p <- p + theme(legend.position = legend.position,
-                 plot.margin = plot.margin,
-                 legend.margin = legend.margin,
-                 legend.box.margin = legend.box.margin,
-                 legend.box.spacing = legend.box.spacing,
-                 legend.key.height = legend.key.height)
+  # p <- p + theme(legend.position = legend.position,
+  #                plot.margin = plot.margin,
+  #                legend.margin = legend.margin,
+  #                legend.box.margin = legend.box.margin,
+  #                legend.box.spacing = legend.box.spacing,
+  #                legend.key.height = legend.key.height)
   p <- p + geom_label_repel(size = 2.5, show.legend = F, family = font_family)
   
   print(p)
@@ -621,7 +629,9 @@ font_family <- "Palatino Linotype"
 
 # run once font_import()
 # run once loadfonts() and make sure Linux Libertine is loaded
-eval_color <- c("#2b83ba", "#d7191c", "#fc8003", "#429537", "#606060", "#000000")
+eval_color <- c("#2b83ba", "#d7191c", "#fdae61", "#ffffbf", "#606060", "#000000")
+eval_color <- c("#2b83ba", "#891012", "#fdae61", "#ffffbf", "#262626", "#000000", "#FFFFFF")
+eval_color_not_bw <- c("#2b83ba", "#d7191c", "#fc8003", "#429537", "#606060", "#000000")
 eval_scale_color <- scale_color_manual(values = eval_color)
 
 eval_theme <- theme(
